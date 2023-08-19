@@ -6,7 +6,7 @@ Pani is a *heavily* modified version of the [camera2basic](https://github.com/an
 This code is built/tested for Pixel 6,7,a/pro.
 
 ## Installing the App
-1. If your device does not lock installing applications from unknown sources, you can just directly install `Pani.apk`
+1. If your device does not lock installing applications from unknown sources, you can just directly install `Pani.apk` (see: releases)
 2. Otherwise, you should [enable developer mode on your device](https://developer.android.com/studio/debug/dev-options), open this project in [android studio](https://developer.android.com/studio), build, and install
 
 
