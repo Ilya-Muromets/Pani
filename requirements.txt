@@ -1,0 +1,6 @@
+matplotlib>=3.7.0
+natsort>=8.4.0
+numpy>=1.23.5
+opencv_python>=4.8.0.74
+rawpy>=0.18.1
+tqdm>=4.64.1
