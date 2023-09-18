@@ -88,6 +88,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -126,6 +127,7 @@ class CameraFragment : Fragment() {
 
     var capturingBurst: AtomicBoolean = AtomicBoolean(false) // are we capturing a burst
     var numCapturedFrames: AtomicInteger = AtomicInteger(0) // number of captures received
+    var maxCapturedTimestamp: AtomicLong = AtomicLong(0) // latest captured frame
 //    var numSavedFrames1: AtomicInteger = AtomicInteger(0)
 //    var numSavedFrames2: AtomicInteger = AtomicInteger(0)
 
@@ -185,7 +187,12 @@ class CameraFragment : Fragment() {
             params.width = width
             params.height = height
             fragmentCameraBinding.viewFinder.layoutParams = params
-        }
+        } //
+        //        fragmentCameraBinding.captureButton.setOnApplyWindowInsetsListener { v, insets ->
+        //            v.translationX = (-insets.systemWindowInsetRight).toFloat()
+        //            v.translationY = (-insets.systemWindowInsetBottom).toFloat()
+        //            insets.consumeSystemWindowInsets()
+        //        }
 
         fragmentCameraBinding.viewFinder.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceDestroyed(holder: SurfaceHolder) = Unit
@@ -357,7 +364,7 @@ class CameraFragment : Fragment() {
 
         val sensorEventListener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
-                if (!capturingBurst.get()) {
+                if (capturingBurst.get() || (event.timestamp <= maxCapturedTimestamp.get())) {
                     when (event.sensor.type) {
                         Sensor.TYPE_LINEAR_ACCELERATION -> { // time, x, y, z
 //                            Log.d(TAG, "Acceleration: " +
@@ -379,8 +386,8 @@ class CameraFragment : Fragment() {
             override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
         }
 
-        sensorManager.registerListener(sensorEventListener, linearAccelerationSensor, 5000)
-        sensorManager.registerListener(sensorEventListener, rotationVectorSensor, 5000)
+        sensorManager.registerListener(sensorEventListener, linearAccelerationSensor, 2 * SensorManager.SENSOR_DELAY_FASTEST)
+        sensorManager.registerListener(sensorEventListener, rotationVectorSensor, 2 * SensorManager.SENSOR_DELAY_FASTEST)
 
         // Set up UI listeners (buttons, switches, etc)
 
@@ -686,6 +693,7 @@ class CameraFragment : Fragment() {
                     val resultTimestamp = result.get(CaptureResult.SENSOR_TIMESTAMP)
                     val requestHash = request.hashCode()
 
+                    maxCapturedTimestamp.set(kotlin.math.max(maxCapturedTimestamp.get(), resultTimestamp!!))
                     navFramesValue.text = numCapturedFrames.getAndAdd(1).toString()
 
                     if (!requestHashQueue.contains(requestHash)) {
