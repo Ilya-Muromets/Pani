@@ -50,6 +50,9 @@ This code is built/tested for Pixel 6,7,a/pro.
 * To avoid accidental rotations, the app assumes you are recording in portrait mode, and .dng files will always be in portrait orientation
 * If it's behaving weird try turning the app off and on again
 
+## Acknowledgment
+This app was initially developed during my (ilya) summer 2023 Google internship, with a lot of support from my managers (Francois Bleibel and Kiran Murphy) and the wider Gcam team. A big thanks to them for making this project possible.
+
 Good luck,  
 Ilya
 
