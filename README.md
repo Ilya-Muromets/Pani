@@ -53,6 +53,8 @@ This code is built/tested for Pixel 6,7,a/pro.
 ## Acknowledgment
 This app was initially developed during my (ilya) summer 2023 Google internship, with a lot of support from my managers (Francois Bleibel and Kiran Murphy) and the wider Gcam team. A big thanks to them for making this project possible.
 
+The original code this is based on is from [https://github.com/android/camera-sample](https://github.com/android/camera-sample) and is licensed under Apache 2.0 by The Android Open Source Project, see `NOTICE` for a copy of their license.
+
 Good luck,  
 Ilya
 
