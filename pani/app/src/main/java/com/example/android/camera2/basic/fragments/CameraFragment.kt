@@ -1,10 +1,24 @@
 /*
+ * Copyright 2024 Ilya Chugunov
+ *
+ * This file has been modified by Ilya Chugunov and is
+ * distributed under the MIT License. The modifications include:
+ * - Multi-camera RAW frame and metadata streaming.
+ * - Local storage integration for data capture.
+ * - UI redesign with settings menu and exposure readouts.
+ *
+ * The original code was licensed under the Apache License, Version 2.0:
+ * [Original Apache License Notice]
+ *
+ * --------------------------------------------------------------------------------
+ *
+ * The original code and its copyright notice:
+ *
  * Copyright 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -360,7 +374,7 @@ class CameraFragment : Fragment() {
         // Set up motion listeners for gyro/accelerometer
         val sensorManager = requireContext().getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val linearAccelerationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
-        val rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+        val rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
 
         val sensorEventListener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
@@ -374,7 +388,7 @@ class CameraFragment : Fragment() {
                             sensorAccValues.add(listOf(event.timestamp.toFloat(), event.values[0], event.values[1], event.values[2]))
                         }
 
-                        Sensor.TYPE_ROTATION_VECTOR -> {
+                        Sensor.TYPE_GAME_ROTATION_VECTOR -> {
                             val quaternion = FloatArray(4)
                             SensorManager.getQuaternionFromVector(quaternion, event.values) // time, w, x, y, z
                             sensorRotValues.add(listOf(event.timestamp.toFloat(), quaternion[0], quaternion[1], quaternion[2], quaternion[3]))

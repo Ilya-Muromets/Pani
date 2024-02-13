@@ -26,9 +26,10 @@ android {
         applicationId "com.android.example.camera2.basic"
         minSdkVersion 33
         targetSdkVersion 33
-        versionCode 1
-        versionName "1.0.0"
+        versionCode 3
+        versionName "1.2"
     }
+
 
     compileOptions {
         sourceCompatibility rootProject.ext.java_version
@@ -37,6 +38,13 @@ android {
 
     kotlinOptions {
         jvmTarget = "$rootProject.ext.java_version"
+    }
+
+    dependenciesInfo {
+        // Disables dependency metadata when building APKs.
+        includeInApk = false
+        // Disables dependency metadata when building Android App Bundles.
+        includeInBundle = false
     }
 
     buildTypes {
