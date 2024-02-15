@@ -1,4 +1,6 @@
 # Pani: Android App for RAW Capture
+
+
 Pani is a *heavily* modified version of the [camera2basic](https://github.com/android/camera-samples/tree/main/Camera2Basic) app, built to simultaneously record 12MP RAW image data, pretty much all exposed camera/image metadata, and gyroscope + accelerometer measurements. 
 
 **Warning:** I am still actively working on this app, it crashes sometimes for reasons beyond my understanding, and sometimes for reasons beyond human understanding. Handle with care.
@@ -8,6 +10,13 @@ This code is built/tested for Pixel 6(a-Pro), 7(a-Pro), 8Pro.
 ## Installing the App
 1. If your device does not lock installing applications from unknown sources, you can just directly install `Pani.apk` (see: releases)
 2. Otherwise, you should [enable developer mode on your device](https://developer.android.com/studio/debug/dev-options), open this project in [android studio](https://developer.android.com/studio), build, and install
+  
+Alternatively, thanks to [IzzySoft](https://github.com/IzzySoft), you can also find this app on IzzyOnDroid:  
+  
+<a href="https://apt.izzysoft.de/fdroid/index/apk/com.android.example.camera2.basic/" style="text-decoration: none;">
+  <img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Open In IzzyOnDroid" style="height:60px;"/>
+</a>
+
 
 
 
