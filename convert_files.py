@@ -10,6 +10,27 @@ import ast
 import rawpy
 import cv2
 import argparse
+import multiprocessing
+
+def parse_color_correction_gains(data_string):
+    color_correction_gains = np.array([float(el) for el in re.sub(r'[^0-9.,]', '', data_string).split(',')]) # RGGB gains
+    return color_correction_gains
+
+def parse_ccm(data_string):
+    ccm = np.array([eval(x.group()) for x in re.finditer(r"[-+]?\d+/\d+|[-+]?\d+\.\d+|[-+]?\d+", data_string)])
+    ccm = ccm.reshape(3,3)
+    return ccm
+
+def parse_tonemap(data_string):
+    channels = re.findall(r'(R|G|B):\[(.*?)\]', data_string)
+    result_array = np.zeros((3, len(channels[0][1].split('),')), 2))
+
+    for i, (_, channel_data) in enumerate(channels):
+        pairs = channel_data.split('),')
+        for j, pair in enumerate(pairs):
+            x, y = map(float, re.findall(r'([\d\.]+)', pair))
+            result_array[i, j] = (x, y)
+    return result_array
 
 def parse_metadata_string(metadata_string):
     keys = re.findall(r'<KEY>android.(.*?)<ENDKEY>', metadata_string)
@@ -116,15 +137,6 @@ def process_motion(npz_file, motion_path):
     
     npz_file['motion'] = motion
 
-def process_characteristics(npz_file, characteristics_path):
-
-    with open(characteristics_path, mode='rb') as file:
-        characteristics_string= str(file.read())
-
-    characteristics_dict = parse_metadata_string(characteristics_string)
-
-    return
-
 def process_metadata(npz_file, metadata_paths):
 
     for metadata_path in metadata_paths:
@@ -170,6 +182,14 @@ def process_metadata(npz_file, metadata_paths):
         lens_distortion = metadata_dict['lens.distortion']
         lens_distortion = lens_distortion = np.array([float(f) for f in lens_distortion.split(',')])
 
+        tonemap_curve = metadata_dict['tonemap.curve']
+        tonemap_curve = parse_tonemap(tonemap_curve)
+
+        color_correction_gains = metadata_dict['colorCorrection.gains']
+        color_correction_gains = parse_color_correction_gains(color_correction_gains)
+
+        ccm = metadata_dict['colorCorrection.transform']
+        ccm = parse_ccm(ccm)
 
         raw_frame = {'android': metadata_dict, # original metadata
                     'frame_count': frame_count,
@@ -183,7 +203,10 @@ def process_metadata(npz_file, metadata_paths):
                     'focus_distance': focus_distance,
                     'intrinsics': intrinsics,
                     'shade_map': shade_map,
-                    'lens_distortion': lens_distortion}
+                    'lens_distortion': lens_distortion,
+                    'tonemap_curve': tonemap_curve,
+                    'color_correction_gains': color_correction_gains,
+                    'ccm': ccm}
 
         npz_file[f'raw_{frame_count}'] = raw_frame
         
@@ -279,53 +302,58 @@ def has_subfolders(folder):
             return True
     return False
 
+def process_bundle(bundle_path, base_path):
+    try:
+        motion_path = path.join(bundle_path, "MOTION.bin")
+        characteristics_path = path.join(bundle_path, "CHARACTERISTICS.bin")
+        raw_paths = natsorted(glob(path.join(bundle_path, "IMG*.dng")))
+        metadata_paths = natsorted(glob(path.join(bundle_path, "IMG*.bin")))
+        assert len(raw_paths) == len(metadata_paths) # matched data
+
+        npz_file = {}
+        npz_file["bundle_name"] = path.basename(bundle_path)
+
+        print(f"Processing: {bundle_path}")
+        process_motion(npz_file, motion_path)
+        process_characteristics(npz_file, characteristics_path)
+        process_metadata(npz_file, metadata_paths)
+        process_raw(npz_file, raw_paths)
+        npz_file = sort_and_filter_files(npz_file)
+
+        # write to npz file
+        if has_subfolders(base_path): # add processed_ prefix to parent folder
+            parent, child = path.dirname(bundle_path), path.basename(bundle_path)
+            parent = path.join(path.dirname(parent), "processed_" + path.basename(parent))
+            save_path = path.join(parent, child)
+        else:
+            save_path = path.join(path.dirname(bundle_path), "processed_" + path.basename(bundle_path))
+
+        os.makedirs(save_path, exist_ok=True)
+        print(f"Saving to: {save_path}")
+        np.savez_compressed(path.join(save_path, "frame_bundle.npz"), **npz_file)
+        save_preview_video(npz_file, path.join(save_path, "preview.mp4"))
+        print("Done.")
+
+    except Exception as e:
+        print(f"Error processing {bundle_path}: {e}")
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', default=None, type=str, required=True, help='Data directory')
     args = parser.parse_args()
 
-    if has_subfolders(args.d):
-        # procesing multiple bundles
-        bundle_paths = natsorted(glob(path.join(args.d, "*/")))
-        # filter out processed bundles, this will code will fail if it is the year 3000 or later
-        bundle_paths = [path.normpath(bundle_path) for bundle_path in bundle_paths if "processed_2" not in bundle_path]
+    base_path = args.d  # Store the base directory
+
+    if has_subfolders(base_path):
+        bundle_paths = natsorted(glob(os.path.join(base_path, "*/")))
+        bundle_paths = [os.path.normpath(bundle_path) for bundle_path in bundle_paths if "processed_2" not in bundle_path]
     else:
-        # processing single bundle
-        bundle_paths = [path.normpath(args.d)]
+        bundle_paths = [os.path.normpath(base_path)]
 
-    for bundle_path in bundle_paths:
-        try:
-            motion_path = path.join(bundle_path, "MOTION.bin")
-            characteristics_path = path.join(bundle_path, "CHARACTERISTICS.bin")
-            raw_paths = natsorted(glob(path.join(bundle_path, "IMG*.dng")))
-            metadata_paths = natsorted(glob(path.join(bundle_path, "IMG*.bin")))
+    num_processes = min(multiprocessing.cpu_count(), 4)
 
-            npz_file = {}
-            npz_file["bundle_name"] = path.basename(bundle_path)
-
-            print(f"Processing: {bundle_path}")
-            process_motion(npz_file, motion_path)
-            process_characteristics(npz_file, characteristics_path)
-            process_metadata(npz_file, metadata_paths)
-            process_raw(npz_file, raw_paths)
-            npz_file = sort_and_filter_files(npz_file)
-
-            # write to npz file
-            if has_subfolders(args.d): # add processed_ prefix to parent folder
-                parent, child = path.dirname(bundle_path), path.basename(bundle_path)
-                parent = path.join(path.dirname(parent), "processed_" + path.basename(parent))
-                save_path = path.join(parent, child)
-            else:
-                save_path = path.join(path.dirname(bundle_path), "processed_" + path.basename(bundle_path))
-
-            os.makedirs(save_path, exist_ok=True)
-            print(f"Saving to: {save_path}")
-            np.savez_compressed(path.join(save_path, "frame_bundle.npz"), **npz_file)
-            save_preview_video(npz_file, path.join(save_path, "preview.mp4"))
-            print("Done.")
-
-        except Exception as e:
-            print(f"Error processing {bundle_path}: {e}")
+    with multiprocessing.Pool(num_processes) as pool:
+        pool.starmap(process_bundle, [(bundle_path, base_path) for bundle_path in bundle_paths])
 
 if __name__ == '__main__':
     main()
