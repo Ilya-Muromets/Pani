@@ -13,7 +13,17 @@ import argparse
 import multiprocessing
 
 def parse_color_correction_gains(data_string):
-    color_correction_gains = np.array([float(el) for el in re.sub(r'[^0-9.,]', '', data_string).split(',')]) # RGGB gains
+    red_pattern = r"R:\s?[0-9]+(((,|\.))[0-9]+)?"
+    green_even_pattern = r"G_even:\s?[0-9]+(((,|\.))[0-9]+)?"
+    green_odd_pattern = r"G_odd:\s?[0-9]+(((,|\.))[0-9]+)?"
+    blue_pattern = r"B:\s?[0-9]+(((,|\.))[0-9]+)?"
+
+    R_gain = float(re.search(red_pattern, data_string).group().split(':')[-1].strip().replace(',', '.'))
+    G_even_gain = float(re.search(green_even_pattern, data_string).group().split(':')[-1].strip().replace(',', '.'))
+    G_odd_gain = float(re.search(green_odd_pattern, data_string).group().split(':')[-1].strip().replace(',', '.'))
+    B_gain = float(re.search(blue_pattern, data_string).group().split(':')[-1].strip().replace(',', '.'))
+    color_correction_gains = np.array([R_gain, G_even_gain, G_odd_gain, B_gain], dtype=np.float32)
+
     return color_correction_gains
 
 def parse_ccm(data_string):
@@ -62,7 +72,7 @@ def write_mp4(frames, video_name='test.mp4', fps=24.0):
     frames = frames - frames.min()
     frames = (frames/frames.max() * 255).astype(np.uint8)
 
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
     video = cv2.VideoWriter(video_name, fourcc, fps, (width,height))
 
     if layers == 4: # RGBA -> BGR
@@ -286,14 +296,56 @@ def sort_and_filter_files(npz_file):
 
     return npz_file_sorted
 
-# save preview grayscale video of RAW data
+def colorize_frame(npz_file, frame, downsample_factor=1, max_brightness=1.0):
+    color_filter_arrangement = npz_file['characteristics']['color_filter_arrangement']
+    color_correction_gains = npz_file['raw_0']['color_correction_gains']
+    ccm = npz_file['raw_0']['ccm']
+    tonemap_curve = npz_file['raw_0']['tonemap_curve']
+    blacklevel = npz_file['raw_0']['blacklevel'][0]
+    whitelevel = npz_file[f'raw_0']['whitelevel']
+
+    top_left = frame[0::2*downsample_factor,0::2*downsample_factor]
+    top_right = frame[0::2*downsample_factor,1::2*downsample_factor]
+    bottom_left = frame[1::2*downsample_factor,0::2*downsample_factor]
+    bottom_right = frame[1::2*downsample_factor,1::2*downsample_factor]
+
+    # figure out color channels
+    if color_filter_arrangement == 0: # RGGB
+        R, G1, G2, B = top_left, top_right, bottom_left, bottom_right
+    elif color_filter_arrangement == 1: # GRBG
+        G1, R, B, G2 = top_left, top_right, bottom_left, bottom_right
+    elif color_filter_arrangement == 2: # GBRG
+        G1, B, R, G2 = top_left, top_right, bottom_left, bottom_right
+    elif color_filter_arrangement == 3: # BGGR
+        B, G1, G2, R = top_left, top_right, bottom_left, bottom_right
+
+    R = ((R - blacklevel) / (whitelevel - blacklevel) * color_correction_gains[0]) 
+    G = ((G1 - blacklevel) / (whitelevel - blacklevel) * color_correction_gains[1])
+    B = ((B - blacklevel) / (whitelevel - blacklevel) * color_correction_gains[3]) 
+
+    rgb_frame = np.stack([R,G,B], axis=0)
+    height, width = rgb_frame.shape[1:]
+
+    rgb_frame = ccm @ rgb_frame.reshape(3,-1)
+    rgb_frame = rgb_frame.reshape(3, height, width)
+    
+    for i in range(3):
+        x_vals, y_vals = tonemap_curve[i][:, 0], tonemap_curve[i][:, 1]
+        rgb_frame[i] = np.interp(rgb_frame[i], x_vals, y_vals)
+
+    # rearrange back to HWC
+    rgb_frame = np.moveaxis(rgb_frame, 0, -1)
+    rgb_frame = rgb_frame/max_brightness
+    rgb_frame = np.clip(rgb_frame, 0, 1)
+
+    return rgb_frame
+
+# save rgb preview video of data
 def save_preview_video(npz_file, save_path):
-    frames = np.array([np.rot90(npz_file[f'raw_{i}']['raw'], 3) for i in range(npz_file['num_raw_frames'])])
-    frames = frames - np.percentile(frames[0], 1) # remove 1% darkest pixels
-    frames = frames / np.percentile(frames[0], 99) # burn out 1% brightest pixels
-    frames = frames.clip(0,1)
-    frames = frames[:,::2,::2] + frames[:,1::2,::2] + frames[:,::2,1::2] + frames[:,1::2,1::2] # average bggr channels
-    frames = np.log1p(10*frames) # log transform for better visualization
+    frames = np.array([npz_file[f'raw_{i}']['raw'] for i in range(npz_file['num_raw_frames'])])
+    max_brightness = np.percentile(colorize_frame(npz_file, frames[0], 2), 98)
+    frames = np.array([colorize_frame(npz_file, frame, 2, max_brightness) for frame in frames])
+    frames = np.rot90(frames, 3, axes=(1,2)) # rotate to portrait mode
     write_mp4(frames, save_path, fps=15.0)
 
 def has_subfolders(folder):
