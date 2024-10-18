@@ -65,7 +65,6 @@ Alternatively, thanks to [IzzySoft](https://github.com/IzzySoft), you can also f
 ## FAQ / Known Issues / Things to Watch Out For / "Features"
 
 * App sometimes hangs and/or crashes. If a folder does not contain `CHARACTERISTICS.bin`, the last save file, you can assume data recording was interrupted and the capture is incomplete
-* App sometimes 'hiccups' on the very first capture after frame 40, this is what the `Burn` button was added for. Recommend burning a 60 frame capture when you first open the app, before recording any actual data to get rid of this hiccup
 * When `Manual E` is set, the viewfinder slightly dims. I think this is a bug with the camera2 preview stream, as the recorded data will appear brighter than the viewfinder
 * Don't select a camera that your phone does not have (e.g., telephoto on a Pixel 6a), app will crash
 * **Physical camera IDs are hard-coded.** They should be correct for most Pixel devices, but I have not tested any other Android phones. Due to the non-trivial problem of determining which camera ID corresponds to which camera, these values are set in the radio button selector section of `CameraFragment.kt` (approx. lines 500-550). If they are wrong I recommend just manually testing numbers 1-10, it's easier than trying to dig through camera characteristics
