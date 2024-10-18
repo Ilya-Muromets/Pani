@@ -1,11 +1,23 @@
 # Pani: Android App for RAW Capture
+This capture app was originally developed for: [Neural Light Spheres for Implicit Image Stitching and View Synthesis](https://light.princeton.edu/publication/neuls/). If you use it, or parts its code, please considering citing our paper:
 
+```
+@inproceedings{chugunov2024light,
+author = {Chugunov, Ilya and Joshi, Amogh and Murthy, Kiran and Bleibel, Francois and Heide, Felix},
+title = {Neural Light Spheres for {Implicit Image Stitching and View Synthesis}},
+booktitle = {Proceedings of the ACM SIGGRAPH Asia 2024},
+year = {2024},
+publisher = {ACM},
+doi = {10.1145/3680528.3687660},
+url = {https://doi.org/10.1145/3680528.3687660}
+}
+```
 
 Pani is a *heavily* modified version of the [camera2basic](https://github.com/android/camera-samples/tree/main/Camera2Basic) app, built to simultaneously record 12MP RAW image data, pretty much all exposed camera/image metadata, and gyroscope + accelerometer measurements. 
 
 **Warning:** I am still actively working on this app, it crashes sometimes for reasons beyond my understanding, and sometimes for reasons beyond human understanding. Handle with care.
 
-This code is built/tested for Pixel 6(a-Pro), 7(a-Pro), 8Pro.
+**This code is built/tested for Pixel 6(a-Pro), 7(a-Pro), 8Pro, 9Pro.** Feel free to send error logs for other devices and I'll do my best to make the app crash less.
 
 ## Installing the App
 1. If your device does not lock installing applications from unknown sources, you can just directly install `Pani.apk` (see: releases)
@@ -31,10 +43,11 @@ Alternatively, thanks to [IzzySoft](https://github.com/IzzySoft), you can also f
     * `Manual F` → Manual set focus distance, auto-populates to most recent autofocus value
     * `Lock OIS` → Turn off optical image stabilization
     * `Max FPS` → Max framerate at which data will be recorded, most camera streams only support a max of 30 or 60 depending on the device
+    * `Max Frames` → App ends recording after this number of frames (e.g., useful for capturing a dataset of exactly 42-frame bursts)
 2. Below the viewfinder is a live readout of ISO, exposure time, and focus distance
 3. `Descriptor` → suffix for saved data, recorded data is written to `Documents/{current-date-time}_{Descriptor}`
 4. `Frames` → number of frames recorded in capture
-5. `Burn` → if checked, will delete recorded data after capture is complete, useful for debugging and de-hiccuping (see later notes)
+5. `Reset` → if held, will reset the camera streat, and all menu settings to defaults
 6. `Big Button` → Hold down to start capturing of data, let go to end capture; wait for viewfinder to reset before recording the next capture
 
 ## Processing the Recorded Data

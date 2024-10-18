@@ -141,7 +141,7 @@
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/trash_layout"
+                android:id="@+id/reset_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/frames_layout"
@@ -150,23 +150,50 @@
 
 
                 <TextView
-                    android:id="@+id/trash_label"
+                    android:id="@+id/reset_label"
                     android:layout_width="wrap_content"
                     android:layout_height="35dp"
                     android:gravity="center_vertical"
-                    android:text="Burn: "
+                    android:text="Reset: "
                     android:textColor="#808080"
                     android:textSize="20dp" />
 
-                <Switch
-                    android:id="@+id/nav_trash"
+                <Button
+                    android:id="@+id/nav_reset"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:trackTint="#AAAAAA"
-                    android:thumbTint="@color/thumb_color"
-                    android:checked="false" />
-
+                    android:layout_height="35dp"
+                    android:text="HOLD"
+                    android:textSize="14dp" />
             </LinearLayout>
+
+
+<!--            <LinearLayout-->
+<!--                android:id="@+id/trash_layout"-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_below="@id/frames_layout"-->
+<!--                android:layout_marginTop="5dp"-->
+<!--                android:orientation="horizontal">-->
+
+
+<!--                <TextView-->
+<!--                    android:id="@+id/trash_label"-->
+<!--                    android:layout_width="wrap_content"-->
+<!--                    android:layout_height="35dp"-->
+<!--                    android:gravity="center_vertical"-->
+<!--                    android:text="Burn: "-->
+<!--                    android:textColor="#808080"-->
+<!--                    android:textSize="20dp" />-->
+
+<!--                <Switch-->
+<!--                    android:id="@+id/nav_trash"-->
+<!--                    android:layout_width="wrap_content"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:trackTint="#AAAAAA"-->
+<!--                    android:thumbTint="@color/thumb_color"-->
+<!--                    android:checked="false" />-->
+
+<!--            </LinearLayout>-->
 
             <ImageButton
                 android:id="@+id/capture_button"
@@ -443,6 +470,29 @@
                     android:layout_height="wrap_content"
                     android:imeOptions="actionDone"
                     android:text="22"
+                    android:inputType="numberDecimal" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="1">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="5dp"
+                    android:text="Max Frames:"
+                    android:textSize="18dp" />
+
+                <EditText
+                    android:id="@+id/nav_max_frames"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionDone"
+                    android:text="999"
                     android:inputType="numberDecimal" />
 
             </LinearLayout>

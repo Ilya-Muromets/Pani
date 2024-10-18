@@ -32,9 +32,9 @@ package com.example.android.camera2.basic.fragments
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.ImageFormat
-import android.graphics.Rect
 import android.hardware.HardwareBuffer
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -48,7 +48,6 @@ import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.DngCreator
 import android.hardware.camera2.TotalCaptureResult
-import android.hardware.camera2.params.MeteringRectangle
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.media.ExifInterface
@@ -68,6 +67,7 @@ import android.view.SurfaceHolder
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.widget.Button
 import android.widget.EditText
 import android.widget.RadioGroup
 import android.widget.Switch
@@ -77,7 +77,6 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
-import com.example.android.camera2.basic.CameraActivity
 import com.example.android.camera2.basic.R
 import com.example.android.camera2.basic.databinding.FragmentCameraBinding
 import kotlinx.coroutines.Dispatchers
@@ -91,8 +90,6 @@ import java.io.Closeable
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.lang.Integer.max
-import java.lang.Integer.min
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -107,6 +104,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import kotlin.random.Random
+
 
 class CameraFragment : Fragment() {
 
@@ -124,9 +122,11 @@ class CameraFragment : Fragment() {
     var navLockOIS: Boolean = false
     var navManualFocus: Boolean = false
     var navManualExposure: Boolean = false
-    var navTrash: Boolean = false // delete files after writing
+//    var navTrash: Boolean = false // delete files after writing
     var navFilename: String = "0"
     var navMaxFPS: Float = 22F
+    var navMaxFrames: Int = 999
+
 
     lateinit var navInfoTextView: TextView
     lateinit var navFramesValue: TextView
@@ -144,6 +144,37 @@ class CameraFragment : Fragment() {
     var maxCapturedTimestamp: AtomicLong = AtomicLong(0) // latest captured frame
 //    var numSavedFrames1: AtomicInteger = AtomicInteger(0)
 //    var numSavedFrames2: AtomicInteger = AtomicInteger(0)
+
+    /** save settings **/
+    private fun saveSettings() {
+        val sharedPref = requireActivity().getSharedPreferences("prefs", Context.MODE_PRIVATE)
+        with(sharedPref.edit()) {
+            putInt("navSelectedCamera", navSelectedCamera)
+            putInt("navISO", navISO)
+            putLong("navExposure", navExposure)
+            putFloat("navFocal", navFocal)
+            putBoolean("navLockAF", navLockAF)
+            putBoolean("navLockAE", navLockAE)
+            putBoolean("navLockOIS", navLockOIS)
+            putBoolean("navManualFocus", navManualFocus)
+            putBoolean("navManualExposure", navManualExposure)
+//            putBoolean("navTrash", navTrash)
+            putString("navFilename", navFilename)
+            putFloat("navMaxFPS", navMaxFPS)
+            putInt("navMaxFrames", navMaxFrames)
+            putString("physicalCameraID", physicalCameraID)
+            apply()
+        }
+    }
+
+    /** reset settings **/
+    private fun resetSharedPreferences() {
+        val sharedPref = requireActivity().getSharedPreferences("prefs", Context.MODE_PRIVATE)
+        with(sharedPref.edit()) {
+            clear()
+            apply()
+        }
+    }
 
     /** Android ViewBinding */
     private var _fragmentCameraBinding: FragmentCameraBinding? = null
@@ -351,11 +382,11 @@ class CameraFragment : Fragment() {
                     capturingBurst.set(false)
                     saveMotion() // save gyro/accelerometer
                     saveCharacteristics(characteristicsP) // save camera characteristics
-                    lifecycleScope.launch(Dispatchers.Main) {
-                        if (navTrash) {
-                            saveFolderDir.deleteRecursively()
-                        }
-                    }
+//                    lifecycleScope.launch(Dispatchers.Main) {
+//                        if (navTrash) {
+//                            saveFolderDir.deleteRecursively()
+//                        }
+//                    }
                     fragmentCameraBinding.overlay.background = null
                     session.setRepeatingRequest(captureRequest.build(), captureCallback, cameraHandler) // restart viewfinder
                 }
@@ -365,11 +396,34 @@ class CameraFragment : Fragment() {
     }
 
     @SuppressLint("ClickableViewAccessibility") private fun initializeCamera() = lifecycleScope.launch(Dispatchers.Main) {
+        // load settings
+        val sharedPref = requireActivity().getSharedPreferences("prefs", Context.MODE_PRIVATE)
+        navSelectedCamera = sharedPref.getInt("navSelectedCamera", navSelectedCamera)
+        navISO = sharedPref.getInt("navISO", navISO)
+        navExposure = sharedPref.getLong("navExposure", navExposure)
+        navFocal = sharedPref.getFloat("navFocal", navFocal)
+        navLockAF = sharedPref.getBoolean("navLockAF", navLockAF)
+        navLockAE = sharedPref.getBoolean("navLockAE", navLockAE)
+        navLockOIS = sharedPref.getBoolean("navLockOIS", navLockOIS)
+        navManualFocus = sharedPref.getBoolean("navManualFocus", navManualFocus)
+        navManualExposure = sharedPref.getBoolean("navManualExposure", navManualExposure)
+//        navTrash = sharedPref.getBoolean("navTrash", navTrash)
+        navFilename = sharedPref.getString("navFilename", navFilename) ?: navFilename
+        navMaxFPS = sharedPref.getFloat("navMaxFPS", navMaxFPS)
+        navMaxFrames = sharedPref.getInt("navMaxFrames", navMaxFrames)
+        physicalCameraID = sharedPref.getString("physicalCameraID", physicalCameraID).toString()
 
         // Open the selected camera
         camera = openCamera(cameraManager, args.cameraId, cameraHandler)
 
-        startCameraStream()
+        try {
+            startCameraStream()
+        } catch (e: Exception) {
+            Log.e("CameraFragment", "Error starting camera stream", e)
+            // reset preferences in case they broke the camera pipeline
+            resetSharedPreferences()
+        }
+
 
         // Set up motion listeners for gyro/accelerometer
         val sensorManager = requireContext().getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -390,7 +444,7 @@ class CameraFragment : Fragment() {
 
                         Sensor.TYPE_GAME_ROTATION_VECTOR -> {
                             val quaternion = FloatArray(4)
-                            SensorManager.getQuaternionFromVector(quaternion, event.values) // time, w, x, y, z
+                            SensorManager.getQuaternionFromVector(quaternion, event.values) // time, x, y, z, w
                             sensorRotValues.add(listOf(event.timestamp.toFloat(), quaternion[0], quaternion[1], quaternion[2], quaternion[3]))
                         }
                     }
@@ -400,8 +454,8 @@ class CameraFragment : Fragment() {
             override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
         }
 
-        sensorManager.registerListener(sensorEventListener, linearAccelerationSensor, 2 * SensorManager.SENSOR_DELAY_FASTEST)
-        sensorManager.registerListener(sensorEventListener, rotationVectorSensor, 2 * SensorManager.SENSOR_DELAY_FASTEST)
+        sensorManager.registerListener(sensorEventListener, linearAccelerationSensor, SensorManager.SENSOR_DELAY_FASTEST)
+        sensorManager.registerListener(sensorEventListener, rotationVectorSensor, SensorManager.SENSOR_DELAY_FASTEST)
 
         // Set up UI listeners (buttons, switches, etc)
 
@@ -413,13 +467,42 @@ class CameraFragment : Fragment() {
         val navEditISO = requireActivity().findViewById<EditText>(R.id.nav_iso)
         val navEditFocal = requireActivity().findViewById<EditText>(R.id.nav_focal)
         val navEditMaxFPS = requireActivity().findViewById<EditText>(R.id.nav_max_fps)
+        val navEditMaxFrames = requireActivity().findViewById<EditText>(R.id.nav_max_frames)
         val navSwitchLockAE = requireActivity().findViewById<Switch>(R.id.nav_lock_AE)
         val navSwitchLockAF = requireActivity().findViewById<Switch>(R.id.nav_lock_AF)
         val navSwitchLockOIS = requireActivity().findViewById<Switch>(R.id.nav_lock_OIS)
         val navSwitchManualE = requireActivity().findViewById<Switch>(R.id.nav_manual_exposure)
         val navSwitchManualF = requireActivity().findViewById<Switch>(R.id.nav_manual_focus)
-        val navSwitchTrash = requireActivity().findViewById<Switch>(R.id.nav_trash)
+//        val navSwitchTrash = requireActivity().findViewById<Switch>(R.id.nav_trash)
         val navRadioCamera = requireActivity().findViewById<RadioGroup>(R.id.radio_group)
+        val navResetButton = requireActivity().findViewById<Button>(R.id.nav_reset)
+
+        // set UI values to those loaded from preferences
+
+        navEditExposure.setText(navExposure.toString())
+        navEditISO.setText(navISO.toString())
+        navEditFocal.setText(navFocal.toString())
+        navEditMaxFPS.setText(navMaxFPS.toString())
+        navEditMaxFrames.setText(navMaxFrames.toString())
+
+        navSwitchLockAE.isChecked = navLockAE
+        navSwitchLockAF.isChecked = navLockAF
+        navSwitchLockOIS.isChecked = navLockOIS
+        navSwitchManualE.isChecked = navManualExposure
+        navSwitchManualF.isChecked = navManualFocus
+//        navSwitchTrash.isChecked = navTrash
+
+        val checkedRadioButtonId = when(navSelectedCamera) {
+            0 -> R.id.nav_camera_main
+            1 -> R.id.nav_camera_uw
+            2 -> R.id.nav_camera_tele
+            3 -> R.id.nav_camera_2X
+            4 -> R.id.nav_camera_10X
+            else -> R.id.nav_camera_main // Default case if needed
+        }
+        navRadioCamera.check(checkedRadioButtonId)
+
+        // Code for switches/inputs
 
         navInfoTextView = requireActivity().findViewById(R.id.text_info)
         navFramesValue = requireActivity().findViewById(R.id.frames_value)
@@ -427,6 +510,7 @@ class CameraFragment : Fragment() {
         navEditFilename.setOnEditorActionListener { v, actionId, event ->
             if (v.text.isNotEmpty() && actionId == EditorInfo.IME_ACTION_DONE || event?.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_ENTER) {
                 navFilename = v.text.toString()
+                saveSettings()
             }
             navEditFilename.isCursorVisible = false // turn off cursor when done
             false
@@ -439,6 +523,7 @@ class CameraFragment : Fragment() {
         navEditExposure.setOnEditorActionListener { v, actionId, event ->
             if (v.text.isNotEmpty() && actionId == EditorInfo.IME_ACTION_DONE || event?.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_ENTER) {
                 navExposure = (1 / v.text.toString().toFloat() * 1e9).toLong() // to nanoseconds
+                saveSettings()
                 restartCameraStream()
             }
             navEditExposure.isCursorVisible = false
@@ -452,6 +537,7 @@ class CameraFragment : Fragment() {
         navEditISO.setOnEditorActionListener { v, actionId, event ->
             if (v.text.isNotEmpty() &&  actionId == EditorInfo.IME_ACTION_DONE || event?.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_ENTER) {
                 navISO = v.text.toString().toInt()
+                saveSettings()
                 restartCameraStream()
             }
             navEditISO.isCursorVisible = false
@@ -465,6 +551,7 @@ class CameraFragment : Fragment() {
         navEditFocal.setOnEditorActionListener { v, actionId, event ->
             if (v.text.isNotEmpty() &&  actionId == EditorInfo.IME_ACTION_DONE || event?.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_ENTER) {
                 navFocal = v.text.toString().toFloat()
+                saveSettings()
                 restartCameraStream()
             }
             navEditFocal.isCursorVisible = false
@@ -478,6 +565,7 @@ class CameraFragment : Fragment() {
         navEditMaxFPS.setOnEditorActionListener { v, actionId, event ->
             if (v.text.isNotEmpty() &&  actionId == EditorInfo.IME_ACTION_DONE || event?.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_ENTER) {
                 navMaxFPS = v.text.toString().toFloat()
+                saveSettings()
             }
             navEditMaxFPS.isCursorVisible = false
             false
@@ -487,17 +575,33 @@ class CameraFragment : Fragment() {
             navEditMaxFPS.isCursorVisible = true
         }
 
+        navEditMaxFrames.setOnEditorActionListener { v, actionId, event ->
+            if (v.text.isNotEmpty() &&  actionId == EditorInfo.IME_ACTION_DONE || event?.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_ENTER) {
+                navMaxFrames = v.text.toString().toInt()
+                saveSettings()
+            }
+            navEditMaxFrames.isCursorVisible = false
+            false
+        }
+
+        navEditMaxFrames.setOnClickListener {
+            navEditMaxFrames.isCursorVisible = true
+        }
+
         navSwitchLockAE.setOnCheckedChangeListener { _, isChecked ->
             navLockAE = isChecked
+            saveSettings()
         }
 
         navSwitchLockAF.setOnCheckedChangeListener { _, isChecked ->
             navLockAF = isChecked
+            saveSettings()
             restartCameraStream()
         }
 
         navSwitchLockOIS.setOnCheckedChangeListener { _, isChecked ->
             navLockOIS = isChecked
+            saveSettings()
             restartCameraStream()
         }
 
@@ -508,8 +612,10 @@ class CameraFragment : Fragment() {
                 navExposure = currentExposure
                 navEditISO.setText(currentISO.toString())
                 navEditExposure.setText((1 / (currentExposure / 1e9)).toInt().toString())
+                saveSettings()
             } else {
                 navManualExposure = false
+                saveSettings()
             }
             restartCameraStream()
         }
@@ -519,15 +625,18 @@ class CameraFragment : Fragment() {
                 navManualFocus = true
                 navFocal = currentFocal
                 navEditFocal.setText(currentFocal.toString())
+                saveSettings()
             } else {
                 navManualFocus = false
+                saveSettings()
             }
             restartCameraStream()
         }
 
-        navSwitchTrash.setOnCheckedChangeListener { _, isChecked ->
-            navTrash = isChecked
-        }
+//        navSwitchTrash.setOnCheckedChangeListener { _, isChecked ->
+//            navTrash = isChecked
+//            saveSettings()
+//        }
 
         navRadioCamera.setOnCheckedChangeListener { _, checkedId ->
             when (checkedId) {
@@ -557,7 +666,18 @@ class CameraFragment : Fragment() {
                 }
 
             }
+            saveSettings()
             restartCameraStream()
+        }
+
+        navResetButton.setOnLongClickListener {
+            // Reset the settings
+            resetSharedPreferences()
+
+            // Simulate backpress to restart app
+            requireActivity().onBackPressedDispatcher.onBackPressed()
+
+            true
         }
     }
 
@@ -707,8 +827,14 @@ class CameraFragment : Fragment() {
                     val resultTimestamp = result.get(CaptureResult.SENSOR_TIMESTAMP)
                     val requestHash = request.hashCode()
 
+                    if (numCapturedFrames.get() >= navMaxFrames){
+                        navFramesValue.text = "MAX"
+                        capturingBurst.set(false) // stop capture
+                    } else {
+                        navFramesValue.text = numCapturedFrames.getAndAdd(1).toString()
+                    }
+
                     maxCapturedTimestamp.set(kotlin.math.max(maxCapturedTimestamp.get(), resultTimestamp!!))
-                    navFramesValue.text = numCapturedFrames.getAndAdd(1).toString()
 
                     if (!requestHashQueue.contains(requestHash)) {
                         Log.d(TAG, "Capture request missing: $requestHash")
