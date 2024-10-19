@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-package com.example.android.camera2.basic.fragments
+package com.android.pani.fragments
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -52,6 +52,9 @@ import kotlinx.coroutines.launch
 import java.io.BufferedInputStream
 import java.io.File
 import kotlin.math.max
+
+import fragmentargs.ImageViewerFragmentArgs
+
 
 
 class ImageViewerFragment : Fragment() {

@@ -28,13 +28,13 @@
  * limitations under the License.
  */
 
-package com.example.android.camera2.basic
+package com.android.pani
 
 import android.os.Bundle
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import androidx.appcompat.app.AppCompatActivity
-import com.example.android.camera2.basic.databinding.ActivityCameraBinding
+import com.android.pani.databinding.ActivityCameraBinding
 
 class CameraActivity : AppCompatActivity() {
 

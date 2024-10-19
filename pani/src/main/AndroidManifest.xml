@@ -34,7 +34,7 @@
         android:hardwareAccelerated="true">
 
         <activity
-            android:name="com.example.android.camera2.basic.CameraActivity"
+            android:name="com.android.pani.CameraActivity"
             android:clearTaskOnLaunch="true"
             android:theme="@style/AppTheme"
             android:exported="true"

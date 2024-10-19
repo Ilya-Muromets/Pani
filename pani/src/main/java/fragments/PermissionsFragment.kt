@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-package com.example.android.camera2.basic.fragments
+package com.android.pani.fragments
 
 import android.Manifest
 import android.content.Context
@@ -39,7 +39,8 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.Navigation
 import androidx.lifecycle.lifecycleScope
-import com.example.android.camera2.basic.R
+import com.android.pani.R
+import fragmentargs.PermissionsFragmentDirections
 
 private const val PERMISSIONS_REQUEST_CODE = 10
 private val PERMISSIONS_REQUIRED = arrayOf(Manifest.permission.CAMERA)
@@ -61,6 +62,7 @@ class PermissionsFragment : Fragment() {
         }
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onRequestPermissionsResult(
             requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
