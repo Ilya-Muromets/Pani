@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 278 89" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g id="Artboard1" transform="matrix(1,0,0,1,-14,-14)">
+        <rect x="14" y="14" width="278" height="89" style="fill:none;"/>
+        <g transform="matrix(0.992727,0,0,1,-512.624,-701)">
+            <path d="M808,726.44L808,792.56C808,797.218 804.19,801 799.498,801L541.502,801C536.81,801 533,797.218 533,792.56L533,726.44C533,721.782 536.81,718 541.502,718L799.498,718C804.19,718 808,721.782 808,726.44Z" style="stroke:rgb(230,230,230);stroke-width:3.14px;"/>
+        </g>
+        <g transform="matrix(1,0,0,0.76087,-435.767,-622.652)">
+            <g transform="matrix(1,-0,-0,1.31429,449.767,836.743)">
+                <path d="M47.483,37.5L33.233,56.5L18.983,37.5L47.483,37.5Z" style="fill:white;"/>
+                <path d="M33.233,21.5L33.233,41.3" style="fill:none;stroke:white;stroke-width:8.33px;"/>
+            </g>
+        </g>
+        <g transform="matrix(1,0,0,1,-292.5,-755)">
+            <text x="369px" y="808.892px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:29.167px;fill:rgb(242,242,242);">Download</text>
+            <g transform="matrix(29.1667,0,0,29.1667,513.309,839.013)">
+            </g>
+            <text x="369px" y="839.013px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:29.167px;fill:rgb(242,242,242);">Latest <tspan x="454.948px 474.402px " y="839.013px 839.013px ">AP</tspan>K</text>
+        </g>
+        <g id="Android_robot.svg" transform="matrix(0.165217,0,0,0.165217,254.787,58.5)">
+            <g transform="matrix(1,0,0,1,-147,-172.5)">
+                <clipPath id="_clip1">
+                    <rect x="0" y="0" width="294" height="345"/>
+                </clipPath>
+                <g clip-path="url(#_clip1)">
+                    <g transform="matrix(1,0,0,1,147,70)">
+                        <g id="b">
+                            <ellipse cx="0" cy="41" rx="91" ry="84" style="fill:rgb(164,198,57);stroke:white;stroke-width:14.4px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;"/>
+                            <path d="M91,42L91,180C91,192.142 81.142,202 69,202L-69,202C-81.142,202 -91,192.142 -91,180L-91,42C-91,29.858 -81.142,20 -69,20L69,20C81.142,20 91,29.858 91,42Z" style="fill:rgb(164,198,57);stroke:white;stroke-width:14.4px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;"/>
+                        </g>
+                        <g id="a" transform="matrix(-1,0,0,1,0,0)">
+                            <g transform="matrix(0.87462,0.48481,-0.48481,0.87462,0,0)">
+                                <path d="M27,-79.5L27,-6.5C27,-2.913 24.087,0 20.5,0C16.913,0 14,-2.913 14,-6.5L14,-79.5C14,-83.087 16.913,-86 20.5,-86C24.087,-86 27,-83.087 27,-79.5Z" style="fill:rgb(164,198,57);stroke:white;stroke-width:7.2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;"/>
+                            </g>
+                            <path id="c" d="M-95,65L-95,150C-95,163.246 -105.754,174 -119,174C-132.246,174 -143,163.246 -143,150L-143,65C-143,51.754 -132.246,41 -119,41C-105.754,41 -95,51.754 -95,65Z" style="fill:rgb(164,198,57);stroke:white;stroke-width:7.2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;"/>
+                            <g id="c1" serif:id="c" transform="matrix(1,0,0,1,85,97)">
+                                <path d="M-95,65L-95,150C-95,163.246 -105.754,174 -119,174C-132.246,174 -143,163.246 -143,150L-143,65C-143,51.754 -132.246,41 -119,41C-105.754,41 -95,51.754 -95,65Z" style="fill:rgb(164,198,57);stroke:white;stroke-width:7.2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;"/>
+                            </g>
+                        </g>
+                        <g id="a1" serif:id="a">
+                            <g transform="matrix(0.87462,0.48481,-0.48481,0.87462,0,0)">
+                                <path d="M27,-79.5L27,-6.5C27,-2.913 24.087,0 20.5,0C16.913,0 14,-2.913 14,-6.5L14,-79.5C14,-83.087 16.913,-86 20.5,-86C24.087,-86 27,-83.087 27,-79.5Z" style="fill:rgb(164,198,57);stroke:white;stroke-width:7.2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;"/>
+                            </g>
+                            <path id="c2" serif:id="c" d="M-95,65L-95,150C-95,163.246 -105.754,174 -119,174C-132.246,174 -143,163.246 -143,150L-143,65C-143,51.754 -132.246,41 -119,41C-105.754,41 -95,51.754 -95,65Z" style="fill:rgb(164,198,57);stroke:white;stroke-width:7.2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;"/>
+                            <g id="c3" serif:id="c" transform="matrix(1,0,0,1,85,97)">
+                                <path d="M-95,65L-95,150C-95,163.246 -105.754,174 -119,174C-132.246,174 -143,163.246 -143,150L-143,65C-143,51.754 -132.246,41 -119,41C-105.754,41 -95,51.754 -95,65Z" style="fill:rgb(164,198,57);stroke:white;stroke-width:7.2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;"/>
+                            </g>
+                        </g>
+                        <g id="b1" serif:id="b">
+                            <ellipse cx="0" cy="41" rx="91" ry="84" style="fill:rgb(164,198,57);"/>
+                            <path d="M91,42L91,180C91,192.142 81.142,202 69,202L-69,202C-81.142,202 -91,192.142 -91,180L-91,42C-91,29.858 -81.142,20 -69,20L69,20C81.142,20 91,29.858 91,42Z" style="fill:rgb(164,198,57);"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1,0,0,1,147,70)">
+                        <path d="M-95,44.5L95,44.5" style="fill:none;fill-rule:nonzero;stroke:white;stroke-width:7.2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;"/>
+                        <circle cx="-42" cy="0" r="4" style="fill:white;stroke:white;stroke-width:7.2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;"/>
+                        <circle cx="42" cy="0" r="4" style="fill:white;stroke:white;stroke-width:7.2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;"/>
+                    </g>
+                </g>
+            </g>
+        </g>
+        <g transform="matrix(0.644469,0,0,1,-312.37,-844.5)">
+            <path d="M531.965,913L531.965,928L584,928L584,913" style="fill:none;stroke:white;stroke-width:8.67px;"/>
+        </g>
+    </g>
+</svg>
