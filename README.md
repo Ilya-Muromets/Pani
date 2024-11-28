@@ -1,3 +1,4 @@
+
 # Pani: Android App for RAW Capture
 This capture app was originally developed for: [Neural Light Spheres for Implicit Image Stitching and View Synthesis](https://light.princeton.edu/publication/neuls/). If you use it, or parts its code, please considering citing our paper:
 
@@ -13,12 +14,13 @@ url = {https://doi.org/10.1145/3680528.3687660}
 }
 ```
 
-<div style="text-align: center;">
-  <video autoplay loop muted playsinline width="50%">
-    <source src="!figs/app-demo-compressed.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
-</div>
+
+<div style="display: flex; align-items: center;"><video controls width="50%" src="https://github.com/user-attachments/assets/42434a2a-8b81-478d-8a09-afccc8a91cd5" muted="true"></video></div>
+
+
+
+
+
 
 Pani is a *heavily* modified version of the [camera2basic](https://github.com/android/camera-samples/tree/main/Camera2Basic) app, built to simultaneously record 12MP RAW image data, pretty much all exposed camera/image metadata, and gyroscope + accelerometer measurements. 
 
