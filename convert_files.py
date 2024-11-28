@@ -155,10 +155,14 @@ def process_metadata(npz_file, metadata_paths):
 
         metadata_dict = parse_metadata_string(metadata_string)
 
-        fx,fy,cx,cy,s = list(metadata_dict['lens.intrinsicCalibration'].split(','))
+        fx, fy, cx, cy, s = list(metadata_dict['lens.intrinsicCalibration'].split(','))
+
+        if npz_file['raw_0']['resolution'] == "HALF": # downsampled RAW
+            fx, fy, cx, cy, s = float(fx)/2, float(fy)/2, float(cx)/2, float(cy)/2, float(s)/2
+
         intrinsics = np.array([[fx, 0,  0],
-                            [s,  fy, 0],
-                            [cx, cy, 1]], dtype=np.float32)
+                               [s,  fy, 0],
+                               [cx, cy, 1]], dtype=np.float32)
 
         frame_count = int(metadata_path.split("_")[-1].strip(".bin"))
 
@@ -201,24 +205,23 @@ def process_metadata(npz_file, metadata_paths):
         ccm = metadata_dict['colorCorrection.transform']
         ccm = parse_ccm(ccm)
 
-        raw_frame = {'android': metadata_dict, # original metadata
-                    'frame_count': frame_count,
-                    'timestamp': timestamp,
-                    'ISO': ISO,
-                    'exposure_time': exposure_time,
-                    'aperture': aperture,
-                    'blacklevel': blacklevel,
-                    'whitelevel': whitelevel,
-                    'focal_length': focal_length,
-                    'focus_distance': focus_distance,
-                    'intrinsics': intrinsics,
-                    'shade_map': shade_map,
-                    'lens_distortion': lens_distortion,
-                    'tonemap_curve': tonemap_curve,
-                    'color_correction_gains': color_correction_gains,
-                    'ccm': ccm}
+        npz_file[f'raw_{frame_count}']['android'] = metadata_dict
+        npz_file[f'raw_{frame_count}']['frame_count'] = frame_count
+        npz_file[f'raw_{frame_count}']['timestamp'] = timestamp
+        npz_file[f'raw_{frame_count}']['ISO'] = ISO
+        npz_file[f'raw_{frame_count}']['exposure_time'] = exposure_time
+        npz_file[f'raw_{frame_count}']['aperture'] = aperture
+        npz_file[f'raw_{frame_count}']['blacklevel'] = blacklevel
+        npz_file[f'raw_{frame_count}']['whitelevel'] = whitelevel
+        npz_file[f'raw_{frame_count}']['focal_length'] = focal_length
+        npz_file[f'raw_{frame_count}']['focus_distance'] = focus_distance
+        npz_file[f'raw_{frame_count}']['intrinsics'] = intrinsics
+        npz_file[f'raw_{frame_count}']['shade_map'] = shade_map
+        npz_file[f'raw_{frame_count}']['lens_distortion'] = lens_distortion
+        npz_file[f'raw_{frame_count}']['tonemap_curve'] = tonemap_curve
+        npz_file[f'raw_{frame_count}']['color_correction_gains'] = color_correction_gains
+        npz_file[f'raw_{frame_count}']['ccm'] = ccm
 
-        npz_file[f'raw_{frame_count}'] = raw_frame
         
     npz_file['num_raw_frames'] = frame_count + 1
 
@@ -253,21 +256,72 @@ def process_characteristics(npz_file, characteristics_path):
 
     npz_file["characteristics"] = characteristics
 
+def split_header_and_data(raw_data):
+    header_pattern = b"(<KEY>.*?<ENDKEY><VALUE>.*?<ENDVALUE>)+"
+    match = re.match(header_pattern, raw_data, re.DOTALL)
+
+    if match:
+        header = match.group()  
+        data_start_index = match.end()  
+        data = raw_data[data_start_index:] 
+        return header, data
+    else:
+        return None, raw_data
+
 
 def process_raw(npz_file, raw_paths):
 
     for raw_path in raw_paths:
-        frame_count = int(raw_path.split("_")[-1].strip(".dng"))
+        if raw_path.endswith(".dng"):
+            frame_count = int(raw_path.split("_")[-1].strip(".dng"))
 
-        raw = rawpy.imread(raw_path).raw_image
-        height, width = raw.shape
+            raw = rawpy.imread(raw_path).raw_image
+            height, width = raw.shape
 
-        if f'raw_{frame_count}' not in npz_file.keys():
-            npz_file[f'raw_{frame_count}'] = {}
-        
-        npz_file[f'raw_{frame_count}']['raw'] = raw
-        npz_file[f'raw_{frame_count}']['height'] = height
-        npz_file[f'raw_{frame_count}']['width'] = width
+            if f'raw_{frame_count}' not in npz_file.keys():
+                npz_file[f'raw_{frame_count}'] = {}
+            
+            npz_file[f'raw_{frame_count}']['raw'] = raw
+            npz_file[f'raw_{frame_count}']['height'] = height
+            npz_file[f'raw_{frame_count}']['width'] = width
+            npz_file[f'raw_{frame_count}']['resolution'] = "FULL"
+        elif raw_path.endswith(".raw"):
+            frame_count = int(raw_path.split("_")[-1].strip(".raw"))
+            
+            # Read the raw file as binary
+            with open(raw_path, 'rb') as f:
+                raw_data = f.read()
+            
+            # Split header and data using the existing function
+            header, data = split_header_and_data(raw_data)
+            
+            # Extract metadata from header
+            header_metadata = {
+                match.group('key').decode('utf-8'): match.group('value').decode('utf-8')
+                for match in re.finditer(b"<KEY>(?P<key>.*?)<ENDKEY><VALUE>(?P<value>.*?)<ENDVALUE>", header)
+            }
+            
+            # Convert metadata values to integers
+            height = int(header_metadata['HEIGHT'])
+            width = int(header_metadata['WIDTH'])
+            bytes_per_pixel = int(header_metadata['BYTES_PER_PIXEL'])
+            resolution = header_metadata['RESOLUTION']
+            
+            # Convert binary data to numpy array
+            dtype = np.uint8 if bytes_per_pixel == 1 else np.uint16
+            raw = np.frombuffer(data, dtype=dtype).reshape((height, width))
+            
+            # Store in npz file structure
+            if f'raw_{frame_count}' not in npz_file.keys():
+                npz_file[f'raw_{frame_count}'] = {}
+            
+            npz_file[f'raw_{frame_count}']['raw'] = raw
+            npz_file[f'raw_{frame_count}']['height'] = height
+            npz_file[f'raw_{frame_count}']['width'] = width
+            npz_file[f'raw_{frame_count}']['bytes_per_pixel'] = bytes_per_pixel
+            npz_file[f'raw_{frame_count}']['resolution'] = resolution
+
+
     
 # Sort raw and metadata files by timestamp, remove dropped frames or metadata
 def sort_and_filter_files(npz_file):
@@ -344,7 +398,10 @@ def colorize_frame(npz_file, frame, downsample_factor=1, max_brightness=1.0):
 def save_preview_video(npz_file, save_path):
     frames = np.array([npz_file[f'raw_{i}']['raw'] for i in range(npz_file['num_raw_frames'])])
     max_brightness = np.percentile(colorize_frame(npz_file, frames[0], 2), 98)
-    frames = np.array([colorize_frame(npz_file, frame, 2, max_brightness) for frame in frames])
+    if frames[0].shape[0] > 2500:
+        frames = np.array([colorize_frame(npz_file, frame, 2, max_brightness) for frame in frames])
+    else: # dont downsample
+        frames = np.array([colorize_frame(npz_file, frame, 1, max_brightness) for frame in frames])
     frames = np.rot90(frames, 3, axes=(1,2)) # rotate to portrait mode
     write_mp4(frames, save_path, fps=15.0)
 
@@ -358,7 +415,7 @@ def process_bundle(bundle_path, base_path):
     try:
         motion_path = path.join(bundle_path, "MOTION.bin")
         characteristics_path = path.join(bundle_path, "CHARACTERISTICS.bin")
-        raw_paths = natsorted(glob(path.join(bundle_path, "IMG*.dng")))
+        raw_paths = natsorted(glob(path.join(bundle_path, "IMG*.dng"))) + natsorted(glob(path.join(bundle_path, "IMG*.raw")))
         metadata_paths = natsorted(glob(path.join(bundle_path, "IMG*.bin")))
         assert len(raw_paths) == len(metadata_paths) # matched data
 
@@ -368,8 +425,8 @@ def process_bundle(bundle_path, base_path):
         print(f"Processing: {bundle_path}")
         process_motion(npz_file, motion_path)
         process_characteristics(npz_file, characteristics_path)
-        process_metadata(npz_file, metadata_paths)
         process_raw(npz_file, raw_paths)
+        process_metadata(npz_file, metadata_paths)
         npz_file = sort_and_filter_files(npz_file)
 
         # write to npz file
@@ -398,7 +455,7 @@ def main():
 
     if has_subfolders(base_path):
         bundle_paths = natsorted(glob(os.path.join(base_path, "*/")))
-        bundle_paths = [os.path.normpath(bundle_path) for bundle_path in bundle_paths if "processed_2" not in bundle_path]
+        bundle_paths = [os.path.normpath(bundle_path) for bundle_path in bundle_paths if "processed_" not in bundle_path]
     else:
         bundle_paths = [os.path.normpath(base_path)]
 

@@ -1,0 +1,19 @@
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Checked state -->
+    <item android:state_checked="true">
+        <shape android:shape="oval">
+            <solid android:color="#67FFFFFF" />
+            <size android:width="25dp" android:height="25dp" />
+            <stroke android:width="2dp" android:color="#FFFFFF" />
+        </shape>
+    </item>
+
+    <!-- Unchecked state -->
+    <item android:state_checked="false">
+        <shape android:shape="oval">
+            <solid android:color="#67000000" />
+            <size android:width="25dp" android:height="25dp" />
+            <stroke android:width="2dp" android:color="#67FFFFFF" />
+        </shape>
+    </item>
+</selector>

@@ -1,4 +1,7 @@
+
 *DS_store
+local.properties
+
 # Built application files
 *.apk
 *.aar

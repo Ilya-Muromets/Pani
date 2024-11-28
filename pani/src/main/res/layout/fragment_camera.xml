@@ -35,7 +35,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
@@ -49,7 +49,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <com.example.android.camera.utils.AutoFitSurfaceView
+            <info.ilyac.pani.utils.AutoFitSurfaceView
                 android:id="@+id/view_finder"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -66,57 +66,295 @@
                 android:layout_alignBottom="@id/view_finder"
                 android:foreground="@android:color/transparent" />
 
-
-            <TextView
-                android:id="@+id/text_info"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_above="@+id/filename_input_layout"
-                android:layout_marginBottom="10dp"
-                android:gravity="left"
-                android:text="ISO: ##### Exposure: ##### Focus: #####"
-                android:textColor="#ffffff"
-                android:textSize="20dp" />
-
+            <ImageButton
+                android:id="@+id/nav_drawer_button"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:paddingLeft="10dp"
+                android:layout_above="@id/filename_input_layout"
+                android:background="@android:color/transparent"
+                android:src="@drawable/menu_button"
+                android:alpha="0.7"
+                android:scaleType="fitXY"/>
 
             <LinearLayout
                 android:id="@+id/filename_input_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_above="@+id/frames_layout"
-                android:layout_marginBottom="10dp"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/descriptor_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="35dp"
-                    android:gravity="center_vertical"
-                    android:text="Descriptor: "
-                    android:textColor="#808080"
-                    android:textSize="20dp" />
+                android:layout_above="@+id/iso_layout"
+                android:layout_marginBottom="5dp"
+                android:layout_marginLeft="0dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
                 <EditText
-                    android:id="@+id/filename_input"
+                    android:id="@+id/nav_filename_input"
                     android:layout_width="0dp"
-                    android:layout_height="35dp"
-                    android:layout_weight="1"
-                    android:background="#40000000"
-                    android:hint="save folder descriptor"
+                    android:layout_height="30dp"
+                    android:layout_weight="0.9"
+                    android:paddingLeft="8dp"
+                    android:background="@drawable/button_background_selector"
+                    android:hint="save name"
                     android:inputType="text"
-                    android:textColor="#ffffff"
-                    android:textColorHint="#404040"
-                    android:textSize="20dp"
-                    android:visibility="visible" />
+                    android:textColor="#80E4E4E4"
+                    android:textColorHint="#80E4E4E4"
+                    android:textSize="20sp"
+                    android:visibility="visible"
+                    android:imeOptions="actionDone" />
+
+                <RadioGroup
+                    android:id="@+id/nav_radio_camera"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginLeft="10dp">
+
+
+                    <RadioButton
+                        android:id="@+id/nav_camera_uw"
+                        layout="@layout/radio_button"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:layout_margin="8dp"
+                        android:button="@null"
+                        android:gravity="center"
+                        android:background="@drawable/radio_button"
+                        android:text="0.5"
+                        android:textColor="@android:color/white"
+                        android:textSize="15sp" />
+
+                    <RadioButton
+                        android:id="@+id/nav_camera_main"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:layout_margin="8dp"
+                        android:button="@null"
+                        android:gravity="center"
+                        android:background="@drawable/radio_button"
+                        android:text="1.0"
+                        android:textColor="@android:color/white"
+                        android:textSize="15sp" />
+
+
+                    <RadioButton
+                        android:id="@+id/nav_camera_2X"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:layout_margin="8dp"
+                        android:button="@null"
+                        android:gravity="center"
+                        android:background="@drawable/radio_button"
+                        android:text="2.0"
+                        android:textColor="@android:color/white"
+                        android:textSize="15sp" />
+
+
+                    <RadioButton
+                        android:id="@+id/nav_camera_tele"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:layout_margin="8dp"
+                        android:button="@null"
+                        android:gravity="center"
+                        android:background="@drawable/radio_button"
+                        android:text="5.0"
+                        android:textColor="@android:color/white"
+                        android:textSize="15sp" />
+
+
+
+                    <RadioButton
+                        android:id="@+id/nav_camera_10X"
+                        layout="@layout/radio_button"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:layout_margin="8dp"
+                        android:button="@null"
+                        android:gravity="center"
+                        android:background="@drawable/radio_button"
+                        android:text="10"
+                        android:textColor="@android:color/white"
+                        android:textSize="15sp" />
+                </RadioGroup>
 
             </LinearLayout>
+
+
+            <LinearLayout
+                android:id="@+id/iso_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_above="@+id/exposure_layout"
+                android:layout_marginBottom="15dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <Button
+                    android:id="@+id/nav_iso_button"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="0.5"
+                    android:text="ISO"
+                    android:textColor="#ffffff"
+                    android:textSize="18sp"
+                    android:background="@drawable/button_background_selector"
+                    android:gravity="center"
+                    />
+
+                <EditText
+                    android:id="@+id/nav_iso"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.5"
+                    android:text="100"
+                    android:textColor="#ffffff"
+                    android:textSize="18sp"
+                    android:inputType="number"
+                    android:imeOptions="actionDone"
+                    android:gravity="center"
+                    android:layout_gravity="center"
+                    android:backgroundTint="#D3D3D3" />
+
+                <SeekBar
+                    android:id="@+id/nav_iso_seekbar"
+                    android:layout_marginEnd="10dp"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="2"
+                    android:min="-99999999"
+                    android:progress="50"
+                    android:max="99999999"
+                    android:layout_marginStart="10dp"
+                    android:layout_gravity="center"
+                    android:progressDrawable="@drawable/seekbar_progress"
+                    android:thumb="@drawable/seekbar_thumb"
+                    android:background="@drawable/seekbar_background"/>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/exposure_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_above="@+id/focus_layout"
+                android:layout_marginBottom="15dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <Button
+                    android:id="@+id/nav_exposure_button"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="0.5"
+                    android:text="EXP"
+                    android:textColor="#ffffff"
+                    android:textSize="18sp"
+                    android:background="@drawable/button_background_selector"
+                    android:gravity="center"
+                    />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:paddingLeft="5dp"
+                    android:text="1/"
+                    android:textSize="14dp"
+                    android:textColor="#D3D3D3" />
+
+                <EditText
+                    android:id="@+id/nav_exposure"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.35"
+                    android:text="0"
+                    android:textColor="#ffffff"
+                    android:textSize="18sp"
+                    android:inputType="numberDecimal"
+                    android:imeOptions="actionDone"
+                    android:gravity="center"
+                    android:layout_gravity="center"
+                    android:backgroundTint="#D3D3D3" />
+
+                <SeekBar
+                    android:id="@+id/nav_exposure_seekbar"
+                    android:layout_marginEnd="10dp"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="2"
+                    android:min="-99999999"
+                    android:progress="50"
+                    android:max="99999999"
+                    android:layout_marginStart="10dp"
+                    android:layout_gravity="center"
+                    android:progressDrawable="@drawable/seekbar_progress"
+                    android:thumb="@drawable/seekbar_thumb"
+                    android:background="@drawable/seekbar_background"/>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/focus_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_above="@+id/frames_layout"
+                android:layout_marginBottom="5dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <Button
+                    android:id="@+id/nav_focus_button"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="0.5"
+                    android:text="FOC"
+                    android:textColor="#ffffff"
+                    android:textSize="18sp"
+                    android:background="@drawable/button_background_selector"
+                    android:gravity="center"
+                    />
+
+                <EditText
+                    android:id="@+id/nav_focus"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.5"
+                    android:text="50"
+                    android:textColor="#ffffff"
+                    android:textSize="18sp"
+                    android:inputType="numberDecimal"
+                    android:imeOptions="actionDone"
+                    android:gravity="center"
+                    android:layout_gravity="center"
+                    android:backgroundTint="#D3D3D3" />
+
+                <SeekBar
+                    android:id="@+id/nav_focus_seekbar"
+                    android:layout_marginEnd="10dp"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:min="-99999999"
+                    android:progress="50"
+                    android:max="99999999"
+                    android:layout_weight="2"
+                    android:layout_marginStart="10dp"
+                    android:layout_gravity="center"
+                    android:progressDrawable="@drawable/seekbar_progress"
+                    android:thumb="@drawable/seekbar_thumb"
+                    android:background="@drawable/seekbar_background"/>
+
+            </LinearLayout>
+
 
             <LinearLayout
                 android:id="@+id/frames_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_above="@id/capture_button"
+                android:layout_above="@id/reset_layout"
                 android:layout_marginBottom="5dp"
+                android:layout_marginLeft="15dp"
                 android:orientation="horizontal">
 
                 <TextView
@@ -140,68 +378,34 @@
 
             </LinearLayout>
 
-            <LinearLayout
+            <RelativeLayout
                 android:id="@+id/reset_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/frames_layout"
-                android:layout_marginTop="5dp"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="40dp"
+                android:layout_marginLeft="15dp"
                 android:orientation="horizontal">
 
-
-                <TextView
-                    android:id="@+id/reset_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="35dp"
-                    android:gravity="center_vertical"
-                    android:text="Reset: "
-                    android:textColor="#808080"
-                    android:textSize="20dp" />
 
                 <Button
                     android:id="@+id/nav_reset"
                     android:layout_width="wrap_content"
-                    android:layout_height="35dp"
-                    android:text="HOLD"
-                    android:textSize="14dp" />
-            </LinearLayout>
+                    android:layout_height="38dp"
+                    android:background="@drawable/button_background_selector"
+                    android:text="RESET"
+                    android:textColor="#ffffff"
+                    android:textSize="18dp" />
 
-
-<!--            <LinearLayout-->
-<!--                android:id="@+id/trash_layout"-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:layout_below="@id/frames_layout"-->
-<!--                android:layout_marginTop="5dp"-->
-<!--                android:orientation="horizontal">-->
-
-
-<!--                <TextView-->
-<!--                    android:id="@+id/trash_label"-->
-<!--                    android:layout_width="wrap_content"-->
-<!--                    android:layout_height="35dp"-->
-<!--                    android:gravity="center_vertical"-->
-<!--                    android:text="Burn: "-->
-<!--                    android:textColor="#808080"-->
-<!--                    android:textSize="20dp" />-->
-
-<!--                <Switch-->
-<!--                    android:id="@+id/nav_trash"-->
-<!--                    android:layout_width="wrap_content"-->
-<!--                    android:layout_height="wrap_content"-->
-<!--                    android:trackTint="#AAAAAA"-->
-<!--                    android:thumbTint="@color/thumb_color"-->
-<!--                    android:checked="false" />-->
-
-<!--            </LinearLayout>-->
+            </RelativeLayout>
 
             <ImageButton
                 android:id="@+id/capture_button"
-                android:layout_width="90dp"
-                android:layout_height="90dp"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
                 android:layout_alignParentBottom="true"
                 android:layout_centerHorizontal="true"
-                android:layout_marginBottom="50dp"
+                android:layout_marginBottom="30dp"
                 android:background="@drawable/ic_shutter"
                 android:contentDescription="@string/capture"
                 android:scaleType="fitCenter" />
@@ -216,64 +420,16 @@
         android:id="@+id/nav_view"
         android:layout_width="180dp"
         android:layout_height="wrap_content"
-        android:layout_gravity="start"
-        android:layout_marginTop="25dp"
-        android:fitsSystemWindows="true">
+        android:layout_gravity="start|bottom"
+        android:layout_marginBottom="400dp"
+        android:fitsSystemWindows="true"
+        android:background="@drawable/nav_view_background">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:padding="16dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Select Camera:"
-                android:textSize="18dp" />
-
-            <RadioGroup
-                android:id="@+id/radio_group"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:dividerPadding="4dp">
-
-                <RadioButton
-                    android:id="@+id/nav_camera_main"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true"
-                    android:text="Main"
-                    android:textSize="18dp" />
-
-                <RadioButton
-                    android:id="@+id/nav_camera_uw"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Ultrawide"
-                    android:textSize="18dp" />
-
-                <RadioButton
-                    android:id="@+id/nav_camera_tele"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Telephoto"
-                    android:textSize="18dp" />
-
-                <RadioButton
-                    android:id="@+id/nav_camera_2X"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="2X"
-                    android:textSize="18dp" />
-
-                <RadioButton
-                    android:id="@+id/nav_camera_10X"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="10X"
-                    android:textSize="18dp" />
-            </RadioGroup>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -286,85 +442,20 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Lock AE:"
-                    android:textSize="18dp" />
+                    android:textSize="18dp"
+                    android:textColor="#D3D3D3" />
 
                 <Switch
                     android:id="@+id/nav_lock_AE"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:thumb="@drawable/switch_thumb"
+                    android:track="@drawable/switch_background"
+                    android:scaleX="0.9"
+                    android:scaleY="0.9"
                     android:checked="true" />
 
             </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingTop="5dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Manual E:"
-                    android:textSize="18dp" />
-
-                <Switch
-                    android:id="@+id/nav_manual_exposure"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="false" />
-
-            </LinearLayout>
-
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="1">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="ISO: "
-                    android:textSize="18dp" />
-
-                <EditText
-                    android:id="@+id/nav_iso"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:imeOptions="actionDone"
-                    android:inputType="number" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="1">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Exposure: "
-                    android:textSize="18dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:text="1/"
-                    android:textSize="18dp" />
-
-                <EditText
-                    android:id="@+id/nav_exposure"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:imeOptions="actionDone"
-                    android:inputType="number" />
-            </LinearLayout>
-
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -377,56 +468,18 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Lock AF:"
-                    android:textSize="18dp" />
+                    android:textSize="18dp"
+                    android:textColor="#D3D3D3" />
 
                 <Switch
                     android:id="@+id/nav_lock_AF"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:thumb="@drawable/switch_thumb"
+                    android:track="@drawable/switch_background"
+                    android:scaleX="0.9"
+                    android:scaleY="0.9"
                     android:checked="true" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingTop="5dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Manual F:"
-                    android:textSize="18dp" />
-
-                <Switch
-                    android:id="@+id/nav_manual_focus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="false" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="1">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingTop="5dp"
-                    android:text="Focus: "
-                    android:textSize="18dp" />
-
-                <EditText
-                    android:id="@+id/nav_focal"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:imeOptions="actionDone"
-                    android:inputType="numberDecimal" />
 
             </LinearLayout>
 
@@ -441,12 +494,17 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Lock OIS:"
-                    android:textSize="18dp" />
+                    android:textSize="18dp"
+                    android:textColor="#D3D3D3" />
 
                 <Switch
                     android:id="@+id/nav_lock_OIS"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:thumb="@drawable/switch_thumb"
+                    android:track="@drawable/switch_background"
+                    android:scaleX="0.9"
+                    android:scaleY="0.9"
                     android:checked="false" />
 
             </LinearLayout>
@@ -460,9 +518,9 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:paddingTop="5dp"
                     android:text="Max FPS: "
-                    android:textSize="18dp" />
+                    android:textSize="18dp"
+                    android:textColor="#D3D3D3" />
 
                 <EditText
                     android:id="@+id/nav_max_fps"
@@ -470,7 +528,8 @@
                     android:layout_height="wrap_content"
                     android:imeOptions="actionDone"
                     android:text="22"
-                    android:inputType="numberDecimal" />
+                    android:inputType="numberDecimal"
+                    android:textColor="#FFFFFF" />
 
             </LinearLayout>
 
@@ -483,9 +542,9 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:paddingTop="5dp"
                     android:text="Max Frames:"
-                    android:textSize="18dp" />
+                    android:textSize="18dp"
+                    android:textColor="#D3D3D3" />
 
                 <EditText
                     android:id="@+id/nav_max_frames"
@@ -493,14 +552,58 @@
                     android:layout_height="wrap_content"
                     android:imeOptions="actionDone"
                     android:text="999"
-                    android:inputType="numberDecimal" />
+                    android:inputType="numberDecimal"
+                    android:textColor="#FFFFFF" />
 
             </LinearLayout>
 
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Resolution:"
+                android:textSize="18sp"
+                android:textColor="#D3D3D3"/>
+
+            <!-- Second Line: Full [switch] Half -->
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical">
+
+                <!-- Full Text -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Half"
+                    android:textSize="18sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginEnd="8dp"/>
+
+                <Switch
+                    android:id="@+id/nav_full_resolution"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:thumb="@drawable/switch_thumb"
+                    android:track="@drawable/switch_background"
+                    android:scaleX="0.9"
+                    android:scaleY="0.9"
+                    android:checked="true" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Full"
+                    android:textSize="18sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginStart="8dp"/>
+            </LinearLayout>
         </LinearLayout>
 
+
     </com.google.android.material.navigation.NavigationView>
+
 
 
 </androidx.drawerlayout.widget.DrawerLayout>

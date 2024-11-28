@@ -28,11 +28,10 @@
  * limitations under the License.
  */
 
-package com.android.pani.fragments
+package info.ilyac.pani.fragments
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
 import android.graphics.Color
 import android.graphics.ImageFormat
 import android.hardware.HardwareBuffer
@@ -44,21 +43,21 @@ import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
-import android.hardware.camera2.DngCreator
 import android.hardware.camera2.TotalCaptureResult
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
-import android.media.ExifInterface
 import android.media.Image
 import android.media.ImageReader
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
-import android.text.Html
+import android.os.Looper
 import android.util.Log
+import android.view.Gravity
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -69,7 +68,9 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.RadioGroup
+import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -77,9 +78,9 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
-import com.android.pani.R
-import com.android.pani.databinding.FragmentCameraBinding
+import info.ilyac.pani.R
 import fragmentargs.CameraFragmentArgs
+import info.ilyac.pani.databinding.FragmentCameraBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.coroutineScope
@@ -91,12 +92,13 @@ import java.io.Closeable
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -104,21 +106,51 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlin.math.log2
 import kotlin.math.max
+import kotlin.math.roundToInt
+import kotlin.properties.Delegates
 import kotlin.random.Random
 
 
 class CameraFragment : Fragment() {
 
+
     private val TAG = CameraFragment::class.java.simpleName
     lateinit var saveFolderDir: File
     private val imageBufferSize = 42 // Max number of images in imageQueue
 
-    // Navigation/UI variables
+    // Navigation/UI variables, post to main loop to update live
     var navSelectedCamera = 0 // 0 - Wide, 1 - Ultrawide, 2 - Tele, 3 - 2X, 4 - 10X
-    var navISO = 1000
-    var navExposure: Long = 10000
-    var navFocal = 1.0F
+
+    var navISO: Int by Delegates.observable(0) { property, oldValue, newValue ->
+        if (::navEditISO.isInitialized) {
+            Handler(Looper.getMainLooper()).post {
+                navEditISO.setText(newValue.toString())
+            }
+        }
+    }
+    var navISOmin: Int = 0
+    var navISOmax: Int = 99999
+    var navExposure: Long by Delegates.observable(0L) { property, oldValue, newValue ->
+        if (::navEditExposure.isInitialized) {
+            Handler(Looper.getMainLooper()).post {
+                navEditExposure.setText(String.format("%.1f", (1e9 / newValue).toFloat()))
+            }
+        }
+    }
+    var navExposuremin: Long = 0
+    var navExposuremax: Long = 999999
+    var navFocus: Float by Delegates.observable(0f) { property, oldValue, newValue ->
+        if (::navEditFocus.isInitialized) {
+            Handler(Looper.getMainLooper()).post {
+                navEditFocus.setText(String.format("%.2f", newValue))
+            }
+        }
+    }
+    var navFocusmin: Float = 0.0F
+    var navFocusmax: Float = 10.0F
+
     var navLockAF = true
     var navLockAE = true
     var navLockOIS = false
@@ -127,14 +159,40 @@ class CameraFragment : Fragment() {
     var navFilename = "0"
     var navMaxFPS = 22F
     var navMaxFrames = 999
+    var navFullResolution = true
 
-    lateinit var navInfoTextView: TextView
+    // set up lateinit navigation elements to access later
+
+    lateinit var navEditExposure: EditText
+    lateinit var navEditISO: EditText
+    lateinit var navEditFocus: EditText
     lateinit var navFramesValue: TextView
 
-    var currentISO = 42
+    lateinit var navEditFilename: EditText
+    lateinit var navEditMaxFPS: EditText
+    lateinit var navEditMaxFrames: EditText
+    lateinit var navSwitchLockAE: Switch
+    lateinit var navSwitchLockAF: Switch
+    lateinit var navSwitchLockOIS: Switch
+    lateinit var navSwitchFullRes: Switch
+    lateinit var navRadioCamera: RadioGroup
+    lateinit var navResetButton: Button
+    lateinit var navDrawerButton: ImageButton
+    lateinit var navISOButton: Button
+    lateinit var navExposureButton: Button
+    lateinit var navFocusButton: Button
+    lateinit var navISOSeekbar: SeekBar
+    lateinit var navExposureSeekbar: SeekBar
+    lateinit var navFocusSeekbar: SeekBar
+
+    lateinit var navSwitchManualE: Switch
+    lateinit var navSwitchManualF: Switch
+
+
+    var currentISO: Int = 42
     var currentFrameDuration: Long = 42
     var currentExposure: Long = 42
-    var currentFocal = 1.0F
+    var currentFocus: Float = 1.0F
 
     var sensorAccValues = mutableListOf<List<Float>>()
     var sensorRotValues = mutableListOf<List<Float>>()
@@ -143,13 +201,52 @@ class CameraFragment : Fragment() {
     var numCapturedFrames = AtomicInteger(0)
     var maxCapturedTimestamp = AtomicLong(0)
 
+
+    private fun setupSeekbars() {
+        val isoRange = characteristicsP.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+        if (isoRange != null) {
+            navISOmax = maxOf(isoRange.upper, 1)
+            navISOmin = maxOf(isoRange.lower, 1)
+            navISO = navISO.coerceIn(navISOmin, navISOmax)
+            navISOSeekbar.max = (log2((navISOmax).toDouble()) * 100).toInt()
+            navISOSeekbar.min = (log2((navISOmin).toDouble()) * 100).toInt()
+            navISOSeekbar.progress = (log2((navISO).toDouble()) * 100).toInt()
+        }
+
+        val exposureRange = characteristicsP.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+        if (exposureRange != null) {
+            navExposuremax = maxOf(exposureRange.upper, 1)
+            navExposuremin = maxOf(exposureRange.lower, 1)
+            navExposure = navExposure.coerceIn(navExposuremin, navExposuremax)
+            navExposureSeekbar.max = (log2(500000000.toDouble()) * 100).toInt() // hardcode to 0.5s max
+            navExposureSeekbar.min = (log2(navExposuremin.toDouble()) * 100).toInt()
+            navExposureSeekbar.progress = (log2(navExposure.toDouble()) * 100).toInt()
+        }
+
+        val minFocusDistance = characteristicsP.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
+        if (minFocusDistance != null) {
+            navFocusmax = minFocusDistance
+            navFocusmin = 0.0F
+            navFocus = navFocus.coerceIn(0F, minFocusDistance)
+            navFocusSeekbar.max = (navFocusmax * 100).toInt()
+            navFocusSeekbar.min = 0
+            navFocusSeekbar.progress = (navFocus * 100).toInt()
+        }
+    }
+
     private fun saveSettings() {
         val sharedPref = requireActivity().getSharedPreferences("prefs", Context.MODE_PRIVATE)
         with(sharedPref.edit()) {
             putInt("navSelectedCamera", navSelectedCamera)
             putInt("navISO", navISO)
+            putInt("navISOmin", navISOmin)
+            putInt("navISOmax", navISOmax)
             putLong("navExposure", navExposure)
-            putFloat("navFocal", navFocal)
+            putLong("navExposuremin", navExposuremin)
+            putLong("navExposuremax", navExposuremax)
+            putFloat("navFocus", navFocus)
+            putFloat("navFocusmin", navFocusmin)
+            putFloat("navFocusmax", navFocusmax)
             putBoolean("navLockAF", navLockAF)
             putBoolean("navLockAE", navLockAE)
             putBoolean("navLockOIS", navLockOIS)
@@ -159,6 +256,7 @@ class CameraFragment : Fragment() {
             putFloat("navMaxFPS", navMaxFPS)
             putInt("navMaxFrames", navMaxFrames)
             putString("physicalCameraID", physicalCameraID)
+            putBoolean("navFullResolution", navFullResolution)
             apply()
         }
     }
@@ -184,6 +282,10 @@ class CameraFragment : Fragment() {
     private val imageReaderHandler = Handler(imageReaderThread.looper)
     private lateinit var camera: CameraDevice
     private lateinit var session: CameraCaptureSession
+    private lateinit var captureRequest: CaptureRequest.Builder
+    private lateinit var captureCallback: CameraCaptureSession.CaptureCallback
+    private lateinit var characteristicsP: CameraCharacteristics
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -197,6 +299,28 @@ class CameraFragment : Fragment() {
     @SuppressLint("MissingPermission")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        navISOSeekbar = fragmentCameraBinding.navIsoSeekbar
+        navExposureSeekbar = fragmentCameraBinding.navExposureSeekbar
+        navFocusSeekbar = fragmentCameraBinding.navFocusSeekbar
+
+        navEditExposure = fragmentCameraBinding.navExposure
+        navEditISO = fragmentCameraBinding.navIso
+        navEditFocus = fragmentCameraBinding.navFocus
+        navEditFilename = fragmentCameraBinding.navFilenameInput
+        navEditMaxFPS = fragmentCameraBinding.navMaxFps
+        navEditMaxFrames = fragmentCameraBinding.navMaxFrames
+        navSwitchLockAE = fragmentCameraBinding.navLockAE
+        navSwitchLockAF = fragmentCameraBinding.navLockAF
+        navSwitchLockOIS = fragmentCameraBinding.navLockOIS
+        navSwitchFullRes = fragmentCameraBinding.navFullResolution
+        navRadioCamera = fragmentCameraBinding.navRadioCamera
+        navResetButton = fragmentCameraBinding.navReset
+        navDrawerButton = fragmentCameraBinding.navDrawerButton
+
+        navISOButton = fragmentCameraBinding.navIsoButton
+        navExposureButton = fragmentCameraBinding.navExposureButton
+        navFocusButton = fragmentCameraBinding.navFocusButton
 
         fragmentCameraBinding.viewFinder.post {
             val width = fragmentCameraBinding.viewFinder.width
@@ -215,8 +339,7 @@ class CameraFragment : Fragment() {
                 format: Int,
                 width: Int,
                 height: Int
-            ) {
-            }
+            ) {}
 
             override fun surfaceCreated(holder: SurfaceHolder) {
                 view.post { initializeCamera() }
@@ -224,13 +347,27 @@ class CameraFragment : Fragment() {
         })
     }
 
+
     private fun restartCameraStream() {
+        if (::session.isInitialized) {
+            session.abortCaptures()
+        }
         lifecycleScope.launch(Dispatchers.Main) { startCameraStream() }
     }
 
+
     @SuppressLint("ClickableViewAccessibility")
     private suspend fun startCameraStream() {
-        val characteristicsP = cameraManager.getCameraCharacteristics(physicalCameraID)
+        characteristicsP = cameraManager.getCameraCharacteristics(physicalCameraID)
+        setupSeekbars()
+
+        // log camera sizes
+        val sizes = characteristicsP.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)!!
+            .getOutputSizes(ImageFormat.RAW_SENSOR)
+        for (size in sizes) {
+            Log.d(TAG, "CameraSize: ${size.width}x${size.height}")
+        }
+
         val size = characteristicsP.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)!!
             .getOutputSizes(args.pixelFormat).maxByOrNull { it.height * it.width }!!
         imageReader = ImageReader.newInstance(
@@ -239,10 +376,11 @@ class CameraFragment : Fragment() {
         )
         val targets = listOf(fragmentCameraBinding.viewFinder.holder.surface, imageReader.surface)
         session = createCaptureSession(camera, targets, cameraHandler)
-        val captureRequest =
-            camera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
-                addTarget(fragmentCameraBinding.viewFinder.holder.surface)
-            }
+
+        // Move captureRequest to a class-level variable
+        captureRequest = camera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
+            addTarget(fragmentCameraBinding.viewFinder.holder.surface)
+        }
 
         captureRequest.apply {
             if (navManualExposure) {
@@ -253,7 +391,7 @@ class CameraFragment : Fragment() {
             when {
                 navManualFocus -> {
                     set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                    set(CaptureRequest.LENS_FOCUS_DISTANCE, navFocal)
+                    set(CaptureRequest.LENS_FOCUS_DISTANCE, navFocus)
                 }
 
                 navLockAF -> set(
@@ -278,7 +416,8 @@ class CameraFragment : Fragment() {
             }
         }
 
-        val captureCallback = object : CameraCaptureSession.CaptureCallback() {
+        // Move captureCallback to a class-level variable
+        captureCallback = object : CameraCaptureSession.CaptureCallback() {
             override fun onCaptureCompleted(
                 session: CameraCaptureSession,
                 request: CaptureRequest,
@@ -286,17 +425,21 @@ class CameraFragment : Fragment() {
             ) {
                 currentISO = result.get(CaptureResult.SENSOR_SENSITIVITY) ?: currentISO
                 currentExposure = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: currentExposure
-                currentFrameDuration =
-                    result.get(CaptureResult.SENSOR_FRAME_DURATION) ?: currentFrameDuration
-                currentFocal = result.get(CaptureResult.LENS_FOCUS_DISTANCE) ?: currentFocal
-
-                val inverseExposure = (1e9 / currentExposure).toInt()
-                val roundedFocal = String.format("%.2f", currentFocal)
-                val text =
-                    "<font color=#808080>ISO:</font> $currentISO <font color=#808080>Exposure:</font>1/$inverseExposure <font color=#808080>Focus:</font> $roundedFocal"
+                currentFrameDuration = result.get(CaptureResult.SENSOR_FRAME_DURATION) ?: currentFrameDuration
+                currentFocus = result.get(CaptureResult.LENS_FOCUS_DISTANCE) ?: currentFocus
 
                 requireActivity().runOnUiThread {
-                    navInfoTextView.text = Html.fromHtml(text, Html.FROM_HTML_MODE_LEGACY)
+                    if (!navManualExposure) {
+                        navISO = currentISO
+                        navExposure = currentExposure
+                        navISOSeekbar.progress = (log2((currentISO).toDouble()) * 100).toInt()
+                        navExposureSeekbar.progress = (log2(currentExposure.toDouble()) * 100).toInt()
+                    }
+
+                    if (!navManualFocus) {
+                        navFocus = currentFocus
+                        navFocusSeekbar.progress = (currentFocus * 100).toInt()
+                    }
                 }
             }
         }
@@ -314,38 +457,58 @@ class CameraFragment : Fragment() {
             true
         }
 
+        // Update the captureButton touch listener to use the new methods
         fragmentCameraBinding.captureButton.setOnTouchListener { view, motionEvent ->
             when (motionEvent.action) {
                 MotionEvent.ACTION_DOWN -> {
                     view.isPressed = true
-                    numCapturedFrames.set(0)
-                    capturingBurst.set(true)
-                    createDataFolder(navFilename)
-                    fragmentCameraBinding.overlay.background =
-                        ContextCompat.getDrawable(requireContext(), R.drawable.border)
-                    session.stopRepeating()
-                    val burstDispatcher =
-                        Executors.newSingleThreadExecutor().asCoroutineDispatcher()
-                    val cameraName = arrayOf("MAIN", "UW", "TELE", "2X", "5X")[navSelectedCamera]
-                    lifecycleScope.launch(burstDispatcher) {
-                        takeBurst(imageReader, cameraName, characteristicsP, AtomicInteger(0))
-                    }
+                    startBurstCapture()
                 }
-
                 MotionEvent.ACTION_UP -> {
                     view.isPressed = false
-                    capturingBurst.set(false)
-                    saveMotion()
-                    saveCharacteristics(characteristicsP)
-                    fragmentCameraBinding.overlay.background = null
-                    session.setRepeatingRequest(
-                        captureRequest.build(),
-                        captureCallback,
-                        cameraHandler
-                    )
+                    stopBurstCapture()
                 }
             }
             true
+        }
+    }
+
+    fun startBurstCapture() {
+        if (capturingBurst.get()) { // already capturing
+            return
+        }
+
+        numCapturedFrames.set(0)
+        capturingBurst.set(true)
+        createDataFolder(navFilename)
+        fragmentCameraBinding.overlay.background = ContextCompat.getDrawable(requireContext(), R.drawable.border_red)
+        session.stopRepeating()
+        val burstDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+        val cameraName = arrayOf("MAIN", "UW", "TELE", "2X", "5X").getOrElse(navSelectedCamera) { "MAIN" }
+        lifecycleScope.launch(burstDispatcher) {
+            takeBurst(imageReader, cameraName, characteristicsP, AtomicInteger(0))
+        }
+    }
+
+    fun stopBurstCapture() {
+        capturingBurst.set(false)
+        saveMotion()
+        saveCharacteristics(characteristicsP)
+        session.setRepeatingRequest(
+            captureRequest.build(),
+            captureCallback,
+            cameraHandler
+        )
+        fragmentCameraBinding.overlay.background = null
+    }
+
+    private fun setButtonSeekerbarState(active: Boolean, button: Button, seekbar: SeekBar) {
+        if (active) {
+            button.background = ContextCompat.getDrawable(requireContext(), R.drawable.button_background_selector_active)
+            seekbar.background = ContextCompat.getDrawable(requireContext(), R.drawable.seekbar_background_active)
+        } else {
+            button.background = ContextCompat.getDrawable(requireContext(), R.drawable.button_background_selector)
+            seekbar.background = ContextCompat.getDrawable(requireContext(), R.drawable.seekbar_background)
         }
     }
 
@@ -355,18 +518,24 @@ class CameraFragment : Fragment() {
         val sharedPref = requireActivity().getSharedPreferences("prefs", Context.MODE_PRIVATE)
         navSelectedCamera = sharedPref.getInt("navSelectedCamera", navSelectedCamera)
         navISO = sharedPref.getInt("navISO", navISO)
+        navISOmin = sharedPref.getInt("navISOmin", navISOmin)
+        navISOmax = sharedPref.getInt("navISOmax", navISOmax)
         navExposure = sharedPref.getLong("navExposure", navExposure)
-        navFocal = sharedPref.getFloat("navFocal", navFocal)
+        navExposuremin = sharedPref.getLong("navExposuremin", navExposuremin)
+        navExposuremax = sharedPref.getLong("navExposuremax", navExposuremax)
+        navFocus = sharedPref.getFloat("navFocus", navFocus)
+        navFocusmin = sharedPref.getFloat("navFocusmin", navFocusmin)
+        navFocusmax = sharedPref.getFloat("navFocusmax", navFocusmax)
         navLockAF = sharedPref.getBoolean("navLockAF", navLockAF)
         navLockAE = sharedPref.getBoolean("navLockAE", navLockAE)
         navLockOIS = sharedPref.getBoolean("navLockOIS", navLockOIS)
         navManualFocus = sharedPref.getBoolean("navManualFocus", navManualFocus)
         navManualExposure = sharedPref.getBoolean("navManualExposure", navManualExposure)
-//        navTrash = sharedPref.getBoolean("navTrash", navTrash)
         navFilename = sharedPref.getString("navFilename", navFilename) ?: navFilename
         navMaxFPS = sharedPref.getFloat("navMaxFPS", navMaxFPS)
         navMaxFrames = sharedPref.getInt("navMaxFrames", navMaxFrames)
         physicalCameraID = sharedPref.getString("physicalCameraID", physicalCameraID).toString()
+        navFullResolution = sharedPref.getBoolean("navFullResolution", navFullResolution)
 
         // Open the selected camera
         camera = openCamera(cameraManager, args.cameraId, cameraHandler)
@@ -392,10 +561,6 @@ class CameraFragment : Fragment() {
                 if (capturingBurst.get() || (event.timestamp <= maxCapturedTimestamp.get())) {
                     when (event.sensor.type) {
                         Sensor.TYPE_LINEAR_ACCELERATION -> { // time, x, y, z
-//                            Log.d(TAG, "Acceleration: " +
-//                                    event.values[0].toString().slice(0..4) + " " +
-//                                    event.values[1].toString().slice(0..4) + " " +
-//                                    event.values[2].toString().slice(0..4))
                             sensorAccValues.add(
                                 listOf(
                                     event.timestamp.toFloat(),
@@ -445,35 +610,18 @@ class CameraFragment : Fragment() {
         val drawerLayout = requireActivity().findViewById<DrawerLayout>(R.id.drawer_layout)
         drawerLayout.setScrimColor(Color.TRANSPARENT)
 
-        val navEditFilename = requireActivity().findViewById<EditText>(R.id.filename_input)
-        val navEditExposure = requireActivity().findViewById<EditText>(R.id.nav_exposure)
-        val navEditISO = requireActivity().findViewById<EditText>(R.id.nav_iso)
-        val navEditFocal = requireActivity().findViewById<EditText>(R.id.nav_focal)
-        val navEditMaxFPS = requireActivity().findViewById<EditText>(R.id.nav_max_fps)
-        val navEditMaxFrames = requireActivity().findViewById<EditText>(R.id.nav_max_frames)
-        val navSwitchLockAE = requireActivity().findViewById<Switch>(R.id.nav_lock_AE)
-        val navSwitchLockAF = requireActivity().findViewById<Switch>(R.id.nav_lock_AF)
-        val navSwitchLockOIS = requireActivity().findViewById<Switch>(R.id.nav_lock_OIS)
-        val navSwitchManualE = requireActivity().findViewById<Switch>(R.id.nav_manual_exposure)
-        val navSwitchManualF = requireActivity().findViewById<Switch>(R.id.nav_manual_focus)
-//        val navSwitchTrash = requireActivity().findViewById<Switch>(R.id.nav_trash)
-        val navRadioCamera = requireActivity().findViewById<RadioGroup>(R.id.radio_group)
-        val navResetButton = requireActivity().findViewById<Button>(R.id.nav_reset)
-
         // set UI values to those loaded from preferences
+        setButtonSeekerbarState(navManualExposure, navISOButton, navISOSeekbar)
+        setButtonSeekerbarState(navManualExposure, navExposureButton, navExposureSeekbar)
+        setButtonSeekerbarState(navManualFocus, navFocusButton, navFocusSeekbar)
 
-        navEditExposure.setText(navExposure.toString())
-        navEditISO.setText(navISO.toString())
-        navEditFocal.setText(navFocal.toString())
         navEditMaxFPS.setText(navMaxFPS.toString())
         navEditMaxFrames.setText(navMaxFrames.toString())
 
         navSwitchLockAE.isChecked = navLockAE
         navSwitchLockAF.isChecked = navLockAF
         navSwitchLockOIS.isChecked = navLockOIS
-        navSwitchManualE.isChecked = navManualExposure
-        navSwitchManualF.isChecked = navManualFocus
-//        navSwitchTrash.isChecked = navTrash
+        navSwitchFullRes.isChecked = navFullResolution
 
         val checkedRadioButtonId = when (navSelectedCamera) {
             0 -> R.id.nav_camera_main
@@ -487,7 +635,6 @@ class CameraFragment : Fragment() {
 
         // Code for switches/inputs
 
-        navInfoTextView = requireActivity().findViewById(R.id.text_info)
         navFramesValue = requireActivity().findViewById(R.id.frames_value)
 
         navEditFilename.setOnEditorActionListener { v, actionId, event ->
@@ -505,7 +652,7 @@ class CameraFragment : Fragment() {
 
         navEditExposure.setOnEditorActionListener { v, actionId, event ->
             if (v.text.isNotEmpty() && actionId == EditorInfo.IME_ACTION_DONE || event?.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_ENTER) {
-                navExposure = (1 / v.text.toString().toFloat() * 1e9).toLong() // to nanoseconds
+                navExposure = (1 / v.text.toString().toFloat() * 1e9).toLong().coerceIn(navExposuremin, navExposuremax) // to nanoseconds
                 saveSettings()
                 restartCameraStream()
             }
@@ -513,13 +660,54 @@ class CameraFragment : Fragment() {
             false
         }
 
+
         navEditExposure.setOnClickListener {
             navEditExposure.isCursorVisible = true
         }
 
+        navEditExposure.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                if (!navManualExposure) {
+                    navManualExposure = true
+                    navISO = currentISO
+                    navExposure = currentExposure
+                    setButtonSeekerbarState(active = true, button = navISOButton, seekbar = navISOSeekbar)
+                    setButtonSeekerbarState(active = true, button = navExposureButton, seekbar = navExposureSeekbar)
+                    saveSettings()
+                }
+            }
+        }
+
+        navExposureSeekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser && navManualExposure) { // change requested by user, not by our code
+                    navExposure = Math.pow(2.0, progress.toFloat()/100.0).toLong().coerceIn(navExposuremin, navExposuremax)
+                    currentExposure = navExposure
+                    captureRequest.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                    captureRequest.set(CaptureRequest.SENSOR_EXPOSURE_TIME, navExposure)
+                    session.setRepeatingRequest(captureRequest.build(), captureCallback, cameraHandler)
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                session.abortCaptures()
+                if (!navManualExposure) {
+                    navManualExposure = true
+                    navISO = currentISO
+                    setButtonSeekerbarState(active = true, button = navISOButton, seekbar = navISOSeekbar)
+                    setButtonSeekerbarState(active = true, button = navExposureButton, seekbar = navExposureSeekbar)
+                    saveSettings()
+                }
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                saveSettings()
+            }
+        })
+
         navEditISO.setOnEditorActionListener { v, actionId, event ->
             if (v.text.isNotEmpty() && actionId == EditorInfo.IME_ACTION_DONE || event?.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_ENTER) {
-                navISO = v.text.toString().toInt()
+                navISO = v.text.toString().toInt().coerceIn(navISOmin, navISOmax)
                 saveSettings()
                 restartCameraStream()
             }
@@ -531,19 +719,99 @@ class CameraFragment : Fragment() {
             navEditISO.isCursorVisible = true
         }
 
-        navEditFocal.setOnEditorActionListener { v, actionId, event ->
+        navEditISO.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                if (!navManualExposure) {
+                    navManualExposure = true
+                    navISO = currentISO
+                    navExposure = currentExposure
+                    setButtonSeekerbarState(active = true, button = navISOButton, seekbar = navISOSeekbar)
+                    setButtonSeekerbarState(active = true, button = navExposureButton, seekbar = navExposureSeekbar)
+                    saveSettings()
+                }
+            }
+        }
+
+        navISOSeekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser && navManualExposure) {
+                    navISO = Math.pow(2.0, progress.toFloat()/100.0).toInt().coerceIn(navISOmin, navISOmax)
+                    currentISO = navISO
+                    captureRequest.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                    captureRequest.set(CaptureRequest.SENSOR_SENSITIVITY, navISO)
+                    session.setRepeatingRequest(captureRequest.build(), captureCallback, cameraHandler)
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                session.abortCaptures()
+                if (!navManualExposure) {
+                    navManualExposure = true
+                    navExposure = currentExposure
+                    setButtonSeekerbarState(active = true, button = navISOButton, seekbar = navISOSeekbar)
+                    setButtonSeekerbarState(active = true, button = navExposureButton, seekbar = navExposureSeekbar)
+                    session.stopRepeating()
+                    saveSettings()
+                }
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                saveSettings()
+            }
+        })
+
+
+        navEditFocus.setOnEditorActionListener { v, actionId, event ->
             if (v.text.isNotEmpty() && actionId == EditorInfo.IME_ACTION_DONE || event?.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_ENTER) {
-                navFocal = v.text.toString().toFloat()
+                navFocus = v.text.toString().toFloat().coerceIn(navFocusmin, navFocusmax)
                 saveSettings()
                 restartCameraStream()
             }
-            navEditFocal.isCursorVisible = false
+            navEditFocus.isCursorVisible = false
             false
         }
 
-        navEditFocal.setOnClickListener {
-            navEditFocal.isCursorVisible = true
+        navEditFocus.setOnClickListener {
+            navEditFocus.isCursorVisible = true
         }
+
+        navEditFocus.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                navManualFocus = true
+                setButtonSeekerbarState(active = true, button = navFocusButton, seekbar = navFocusSeekbar)
+                saveSettings()
+            }
+        }
+
+        navFocusSeekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser && navManualFocus) {
+                    navFocus = (progress.toFloat() / 100).coerceIn(navFocusmin, navFocusmax)
+                    currentFocus = navFocus
+                    captureRequest.set(CaptureRequest.LENS_FOCUS_DISTANCE, navFocus)
+                    // have to manually change captureRequest since restartCameraStream() makes the stream hiccup
+                    captureRequest.set(
+                        CaptureRequest.CONTROL_AF_MODE,
+                        CaptureRequest.CONTROL_AF_MODE_OFF
+                    )
+                    session.setRepeatingRequest(captureRequest.build(), captureCallback, cameraHandler)
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                session.abortCaptures()
+                if (!navManualFocus) {
+                    navManualFocus = true
+                    setButtonSeekerbarState(active = true, button = navFocusButton, seekbar = navFocusSeekbar)
+                    session.stopRepeating()
+                    saveSettings()
+                }
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                saveSettings()
+            }
+        })
 
         navEditMaxFPS.setOnEditorActionListener { v, actionId, event ->
             if (v.text.isNotEmpty() && actionId == EditorInfo.IME_ACTION_DONE || event?.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_ENTER) {
@@ -588,63 +856,141 @@ class CameraFragment : Fragment() {
             restartCameraStream()
         }
 
-        navSwitchManualE.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
+        navExposureButton.setOnLongClickListener {
+            if (navManualExposure) {
+                navManualExposure = false
+                setButtonSeekerbarState(active = false, button = navISOButton, seekbar = navISOSeekbar)
+                setButtonSeekerbarState(active = false, button = navExposureButton, seekbar = navExposureSeekbar)
+                saveSettings()
+                restartCameraStream()
+                true
+            } else {
                 navManualExposure = true
+                setButtonSeekerbarState(active = true, button = navISOButton, seekbar = navISOSeekbar)
+                setButtonSeekerbarState(active = true, button = navExposureButton, seekbar = navExposureSeekbar)
                 navISO = currentISO
                 navExposure = currentExposure
-                navEditISO.setText(currentISO.toString())
-                navEditExposure.setText((1 / (currentExposure / 1e9)).toInt().toString())
                 saveSettings()
-            } else {
+                restartCameraStream()
+                false
+            }
+        }
+
+        // duplicate code because we can't do shutter/speed priority
+        navISOButton.setOnLongClickListener {
+            if (navManualExposure) {
                 navManualExposure = false
+                setButtonSeekerbarState(active = false, button = navISOButton, seekbar = navISOSeekbar)
+                setButtonSeekerbarState(active = false, button = navExposureButton, seekbar = navExposureSeekbar)
                 saveSettings()
-            }
-            restartCameraStream()
-        }
-
-        navSwitchManualF.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                navManualFocus = true
-                navFocal = currentFocal
-                navEditFocal.setText(currentFocal.toString())
-                saveSettings()
+                restartCameraStream()
+                true
             } else {
-                navManualFocus = false
+                navManualExposure = true
+                setButtonSeekerbarState(active = true, button = navISOButton, seekbar = navISOSeekbar)
+                setButtonSeekerbarState(active = true, button = navExposureButton, seekbar = navExposureSeekbar)
+                navISO = currentISO
+                navExposure = currentExposure
                 saveSettings()
+                restartCameraStream()
+                false
             }
-            restartCameraStream()
         }
 
-//        navSwitchTrash.setOnCheckedChangeListener { _, isChecked ->
-//            navTrash = isChecked
-//            saveSettings()
-//        }
 
+        navFocusButton.setOnLongClickListener {
+            if (navManualFocus) {
+                navManualFocus = false
+                setButtonSeekerbarState(active = false, button = navFocusButton, seekbar = navFocusSeekbar)
+                saveSettings()
+                restartCameraStream()
+                true
+            } else {
+                navManualFocus = true
+                navFocus = currentFocus
+                setButtonSeekerbarState(active = true, button = navFocusButton, seekbar = navFocusSeekbar)
+                saveSettings()
+                restartCameraStream()
+                false
+            }
+
+        }
+
+
+        navSwitchFullRes.setOnCheckedChangeListener { _, isChecked ->
+            navFullResolution = isChecked
+            saveSettings()
+        }
+
+        data class Camera(
+            val id: String,
+            val focalLength: Float,
+            val sensorArea: Float
+        )
+
+        fun createCameraGroups(cameraManager: CameraManager): List<List<String>> {
+            val cameras = mutableListOf<Camera>()
+
+            // Collect all back cameras
+            for (i in 0..50) { // idk there's probably not more than 50 cameras
+                try {
+                    val chars = cameraManager.getCameraCharacteristics(i.toString())
+
+                    // Skip if not back-facing
+                    if (chars.get(CameraCharacteristics.LENS_FACING) != CameraCharacteristics.LENS_FACING_BACK) continue
+
+                    // Get focal length
+                    val focalLength = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)?.get(0) ?: continue
+
+                    // Get sensor size for sorting
+                    val sensor = chars.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
+                    val sensorArea = if (sensor != null) sensor.width * sensor.height else 0f
+
+                    cameras.add(Camera(i.toString(), focalLength, sensorArea))
+
+                } catch (e: Exception) {
+                    continue
+                }
+            }
+
+            // Group by focal length and sort by sensor size
+            return cameras
+                .groupBy { it.focalLength.roundToInt() }
+                .toSortedMap()
+                .values
+                .map { group ->
+                    group.sortedByDescending { it.sensorArea }.map { it.id }
+                }
+        }
+
+        val cameraGroups = createCameraGroups(cameraManager)
+
+        // Radio Camera Selection
+        // hard-coded camera selection nonsense, 2 almost always exists and is the main camera on every phone I've tested
         navRadioCamera.setOnCheckedChangeListener { _, checkedId ->
             when (checkedId) {
                 R.id.nav_camera_main -> {
-                    physicalCameraID = "2"
+                    physicalCameraID = cameraGroups.getOrNull(1)?.getOrNull(1) ?: "2"
                     navSelectedCamera = 0
                 }
 
                 R.id.nav_camera_uw -> {
-                    physicalCameraID = "3"
+                    physicalCameraID = cameraGroups.getOrNull(0)?.getOrNull(0) ?: "2"
                     navSelectedCamera = 1
                 }
 
                 R.id.nav_camera_tele -> {
-                    physicalCameraID = "4"
+                    physicalCameraID =  cameraGroups.getOrNull(2)?.getOrNull(0) ?: "2"
                     navSelectedCamera = 2
                 }
 
                 R.id.nav_camera_2X -> {
-                    physicalCameraID = "5"
+                    physicalCameraID =  cameraGroups.getOrNull(1)?.getOrNull(2) ?: "2"
                     navSelectedCamera = 3
                 }
 
                 R.id.nav_camera_10X -> {
-                    physicalCameraID = "6"
+                    physicalCameraID = cameraGroups.getOrNull(2)?.getOrNull(1) ?: "2"
                     navSelectedCamera = 4
                 }
 
@@ -653,7 +999,14 @@ class CameraFragment : Fragment() {
             restartCameraStream()
         }
 
-        navResetButton.setOnLongClickListener {
+        navResetButton.setOnClickListener {
+            // Simulate backpress to restart app
+            session.abortCaptures()
+            requireActivity().onBackPressedDispatcher.onBackPressed()
+        }
+
+        navResetButton.setOnLongClickListener { // hard reset
+            session.abortCaptures()
             // Reset the settings
             resetSharedPreferences()
 
@@ -662,6 +1015,12 @@ class CameraFragment : Fragment() {
 
             true
         }
+
+        navDrawerButton.setOnClickListener {
+            // open/close drawer
+            drawerLayout.openDrawer(Gravity.LEFT)
+        }
+
     }
 
     /** Opens the camera and returns the opened device (as the result of the suspend coroutine) */
@@ -776,12 +1135,12 @@ class CameraFragment : Fragment() {
                     when {
                         navManualFocus -> {
                             set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                            set(CaptureRequest.LENS_FOCUS_DISTANCE, navFocal)
+                            set(CaptureRequest.LENS_FOCUS_DISTANCE, navFocus)
                         }
 
                         navLockAF -> {
                             set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                            set(CaptureRequest.LENS_FOCUS_DISTANCE, currentFocal)
+                            set(CaptureRequest.LENS_FOCUS_DISTANCE, currentFocus)
                         }
 
                         else -> set(
@@ -905,7 +1264,6 @@ class CameraFragment : Fragment() {
         imageReader.close()
         Log.d(TAG, "Done capturing burst.")
     }
-
     /** Saves the capture result to a file */
     private fun saveResult(
         result: CombinedCaptureResult,
@@ -914,32 +1272,196 @@ class CameraFragment : Fragment() {
         characteristicsP: CameraCharacteristics
     ) {
         if (result.format == ImageFormat.RAW_SENSOR) {
-            val metadataString = createMetadataString(result.metadata)
-            val dngCreator = DngCreator(characteristicsP, result.metadata).apply {
-                setOrientation(ExifInterface.ORIENTATION_ROTATE_90)
-            }
             try {
                 val currentFrame = numRecordedFrames.getAndIncrement()
-                val outputImage =
-                    createFile("IMG_${cameraName}_${String.format("%03d", currentFrame)}", "dng")
-                val outputMetadata =
-                    createFile("IMG_${cameraName}_${String.format("%03d", currentFrame)}", "bin")
+                val outputRaw = createFile("IMG_${cameraName}_${String.format("%03d", currentFrame)}", "raw")
+                val outputMetadata = createFile("IMG_${cameraName}_${String.format("%03d", currentFrame)}", "bin")
+                val outputPreview = createFile("IMG_${cameraName}_${String.format("%03d", currentFrame)}_preview", "bmp")
 
-                BufferedOutputStream(FileOutputStream(outputImage)).use {
-                    dngCreator.writeImage(it, result.image)
-                }
+                // Save the BMP preview of the RAW image
+                saveBMP(result, outputPreview, characteristicsP)
+                // Save the downsampled RAW image
+                saveRAW(result, outputRaw)
+
+                // Save the metadata to a separate file
+                val metadataString = createMetadataString(result.metadata)
                 BufferedOutputStream(FileOutputStream(outputMetadata)).use { outStream ->
                     outStream.write(metadataString.toByteArray())
                 }
-                Log.d(TAG, "Image saved: ${outputImage.absolutePath}")
+
+                Log.d(TAG, "RAW image and preview saved: ${outputRaw.absolutePath}, ${outputPreview.absolutePath}")
             } catch (exc: IOException) {
-                Log.e(TAG, "Unable to write DNG image to file", exc)
+                Log.e(TAG, "Unable to write RAW image or preview to file", exc)
             }
         } else {
             val exc = RuntimeException("Unknown image format: ${result.image.format}")
             Log.e(TAG, exc.message, exc)
         }
     }
+
+    private fun saveBMP(result: CombinedCaptureResult, outputPreview: File, characteristicsP: CameraCharacteristics) {
+        val plane = result.image.planes[0]
+        val buffer = plane.buffer
+
+        val originalWidth = result.image.width
+        val originalHeight = result.image.height
+
+        var targetWidth = 512
+        var targetHeight = ((originalHeight * targetWidth) / originalWidth).coerceAtLeast(2)
+
+        // Calculate ratios to downsample the original image
+        val widthRatio = (((originalWidth / targetWidth).coerceAtLeast(2) / 2) * 2).coerceAtLeast(2)
+        val heightRatio = (((originalHeight / targetHeight).coerceAtLeast(2) / 2) * 2).coerceAtLeast(2)
+
+        targetWidth = originalWidth / widthRatio
+        targetHeight = originalHeight / heightRatio
+
+        val rowStride = plane.rowStride
+        val pixelStride = plane.pixelStride
+        val maxPixelValue = characteristicsP.get(CameraCharacteristics.SENSOR_INFO_WHITE_LEVEL) ?: 1023
+        val bytesPerPixel = pixelStride.coerceAtLeast(1)
+
+        FileOutputStream(outputPreview).use { outputStream ->
+            val rotatedWidth = targetHeight
+            val rotatedHeight = targetWidth
+
+            // Write BMP header and DIB header for an 8-bit grayscale image
+            val fileSize = 14 + 40 + 256 * 4 + (rotatedWidth * rotatedHeight)
+            val bmpHeader = ByteArray(14)
+            bmpHeader[0] = 'B'.toByte()
+            bmpHeader[1] = 'M'.toByte()
+            ByteBuffer.wrap(bmpHeader, 2, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(fileSize)
+            ByteBuffer.wrap(bmpHeader, 10, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(14 + 40 + 256 * 4)
+            outputStream.write(bmpHeader)
+
+            val dibHeader = ByteArray(40)
+            ByteBuffer.wrap(dibHeader, 0, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(40)
+            ByteBuffer.wrap(dibHeader, 4, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(rotatedWidth)
+            ByteBuffer.wrap(dibHeader, 8, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(-rotatedHeight)
+            ByteBuffer.wrap(dibHeader, 12, 2).order(ByteOrder.LITTLE_ENDIAN).putShort(1)
+            ByteBuffer.wrap(dibHeader, 14, 2).order(ByteOrder.LITTLE_ENDIAN).putShort(8)
+            ByteBuffer.wrap(dibHeader, 20, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(0)
+            outputStream.write(dibHeader)
+
+            // Write grayscale color palette
+            val colorPalette = ByteArray(256 * 4)
+            for (i in 0 until 256) {
+                colorPalette[i * 4] = i.toByte()
+                colorPalette[i * 4 + 1] = i.toByte()
+                colorPalette[i * 4 + 2] = i.toByte()
+                colorPalette[i * 4 + 3] = 0
+            }
+            outputStream.write(colorPalette)
+
+            val rowPadding = (4 - (rotatedWidth % 4)) % 4
+            val rowBuffer = ByteArray(rotatedWidth + rowPadding)
+
+            for (y in 0 until rotatedHeight) {
+                for (x in 0 until rotatedWidth) {
+                    // Map rotated coordinates to the original image for sampling
+                    val mappedX = (y * widthRatio).toInt()
+                    val mappedY = (originalHeight - 1 - x * heightRatio).toInt()
+
+                    val originalX = (mappedX and -2).coerceIn(0, originalWidth - 2)
+                    val originalY = (mappedY and -2).coerceIn(0, originalHeight - 2)
+
+                    val pixelIndex = originalY * rowStride + originalX * pixelStride
+
+                    if (pixelIndex + bytesPerPixel <= buffer.limit()) {
+                        var pixelValue = 0
+                        for (i in 0 until bytesPerPixel) {
+                            pixelValue += ((buffer.get(pixelIndex + i).toInt() and 0xFF) shl (i * 8))
+                        }
+                        // Convert pixel value to 8-bit grayscale and adjust brightness
+                        val pixelValue8Bit = ((pixelValue.toFloat() * 5 / maxPixelValue) * 255f).toInt().coerceIn(0, 255).toByte()
+                        rowBuffer[x] = pixelValue8Bit
+                    } else {
+                        rowBuffer[x] = 0
+                    }
+                }
+                for (p in 0 until rowPadding) {
+                    rowBuffer[rotatedWidth + p] = 0
+                }
+                outputStream.write(rowBuffer)
+            }
+        }
+    }
+
+    private fun saveRAW(result: CombinedCaptureResult, outputRaw: File) {
+        val plane = result.image.planes[0]
+        val buffer = plane.buffer
+        val rowStride = plane.rowStride
+        val pixelStride = plane.pixelStride
+        val bytesPerPixel = pixelStride.coerceAtLeast(1)
+        val originalWidth = result.image.width
+        val originalHeight = result.image.height
+
+        if (navFullResolution) {
+            // add header for unpacking
+            val characteristicStringBuilder = StringBuilder()
+            characteristicStringBuilder.append("<KEY>HEIGHT<ENDKEY><VALUE>${originalHeight}<ENDVALUE>")
+            characteristicStringBuilder.append("<KEY>WIDTH<ENDKEY><VALUE>${originalWidth}<ENDVALUE>")
+            characteristicStringBuilder.append("<KEY>BYTES_PER_PIXEL<ENDKEY><VALUE>${bytesPerPixel}<ENDVALUE>")
+            characteristicStringBuilder.append("<KEY>RESOLUTION<ENDKEY><VALUE>FULL<ENDVALUE>")
+
+            val headerBytes = characteristicStringBuilder.toString().toByteArray(Charsets.UTF_8)
+
+            val rawBytes = ByteArray(buffer.remaining())
+            buffer.get(rawBytes)
+
+            BufferedOutputStream(FileOutputStream(outputRaw)).use { outStream ->
+                outStream.write(headerBytes)
+                outStream.write(rawBytes)
+            }
+        } else {
+            BufferedOutputStream(FileOutputStream(outputRaw)).use { outputStream ->
+                val writeBuffer = ByteArray(bytesPerPixel * originalWidth)
+                val rowBuffer = ByteArray(rowStride * 2)
+
+                val characteristicStringBuilder = StringBuilder()
+                characteristicStringBuilder.append("<KEY>HEIGHT<ENDKEY><VALUE>${originalHeight / 2}<ENDVALUE>")
+                characteristicStringBuilder.append("<KEY>WIDTH<ENDKEY><VALUE>${originalWidth / 2}<ENDVALUE>")
+                characteristicStringBuilder.append("<KEY>BYTES_PER_PIXEL<ENDKEY><VALUE>${bytesPerPixel}<ENDVALUE>")
+                characteristicStringBuilder.append("<KEY>RESOLUTION<ENDKEY><VALUE>HALF<ENDVALUE>")
+
+                val headerBytes = characteristicStringBuilder.toString().toByteArray(Charsets.UTF_8)
+
+                outputStream.write(headerBytes)
+
+                for (y in 0 until originalHeight step 4) {
+                    val readIndexRow1 = y * rowStride
+                    buffer.position(readIndexRow1)
+
+                    if (buffer.remaining() < rowStride * 2) {
+                        break
+                    }
+
+                    buffer.get(rowBuffer, 0, rowStride * 2)
+
+                    var writeIndex = 0
+                    // write top half of bayer pattern (e.g., RGRGRG...)
+                    for (x in 0 until originalWidth step 4) {
+                        val offset1 = x * pixelStride
+
+                        System.arraycopy(rowBuffer, offset1, writeBuffer, writeIndex, bytesPerPixel * 2)
+                        writeIndex += bytesPerPixel * 2
+                    }
+                    // write bottom half of bayer pattern (e.g., GBGBGB...)
+                    for (x in 0 until originalWidth step 4) {
+                        val offset2 = x * pixelStride
+
+                        System.arraycopy(rowBuffer, rowStride + offset2, writeBuffer, writeIndex, bytesPerPixel * 2)
+                        writeIndex += bytesPerPixel * 2
+                    }
+                    // Write the downsampled data for these rows
+                    outputStream.write(writeBuffer, 0, writeIndex)
+                }
+            }
+        }
+    }
+
+
+
 
     /** Saves motion sensor data to a file */
     private fun saveMotion() {

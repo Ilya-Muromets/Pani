@@ -13,11 +13,18 @@ url = {https://doi.org/10.1145/3680528.3687660}
 }
 ```
 
+<div style="text-align: center;">
+  <video autoplay loop muted playsinline width="50%">
+    <source src="!figs/app-demo-compressed.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+</div>
+
 Pani is a *heavily* modified version of the [camera2basic](https://github.com/android/camera-samples/tree/main/Camera2Basic) app, built to simultaneously record 12MP RAW image data, pretty much all exposed camera/image metadata, and gyroscope + accelerometer measurements. 
 
 **Warning:** I am still actively working on this app, it crashes sometimes for reasons beyond my understanding, and sometimes for reasons beyond human understanding. Handle with care.
 
-**This code is built/tested for Pixel 6(a-Pro), 7(a-Pro), 8Pro, 9Pro.** Feel free to send error logs for other devices and I'll do my best to make the app crash less.
+**This code has been mostly tested on the Google Pixel line of phones (7Pro, 8Pro, 9Pro).** Feel free to send error logs for other devices and I'll do my best to make the app crash less.
 
 ## Installing the App
 <div style="display: flex; align-items: center;">
@@ -41,25 +48,26 @@ Alternatively, thanks to [IzzySoft](https://github.com/IzzySoft), you can also f
 
 
 ## Using the App
-![app](!figs/app.png)                                                                       
+![app](!figs/app.png)
 
-1. Swipe from the left of the screen to access the settings menu. This menu contains:
-    * Physical/ISP camera selection
-    * `Lock AE` → Lock autoexposure during capture
-    * `Manual E` → Set manual exposure, auto-populates ISO and exposure time to the most recent autoexposure values
-    * `Lock AF` → Lock autofocus during capture, unlock this to set the app to continuous video-mode focus
-    * `Manual F` → Manual set focus distance, auto-populates to most recent autofocus value
-    * `Lock OIS` → Turn off optical image stabilization
-    * `Max FPS` → Max framerate at which data will be recorded, most camera streams only support a max of 30 or 60 depending on the device
-    * `Max Frames` → App ends recording after this number of frames (e.g., useful for capturing a dataset of exactly 42-frame bursts)
-2. Below the viewfinder is a live readout of ISO, exposure time, and focus distance
-3. `Descriptor` → suffix for saved data, recorded data is written to `Documents/{current-date-time}_{Descriptor}`
-4. `Frames` → number of frames recorded in capture
-5. `Reset` → if held, will reset the camera streat, and all menu settings to defaults
+Below the viewfinder are:
+1. `Save Name` → suffix for saved data, recorded data is written to `Documents/{current-date-time}_{save-name}`
+2. Camera selector (0.5, 1.0, 2.0, 5.0, 10.0 magnification)
+3. Three buttons, edit fields, and seekbars for `ISO`, `Exposure Time (EXP)`, and `Focus (FOC)`. While the seekbar is grey, its position and the value in the edit field will reflect the device's current auto focus/exposure. Hold down the button to switch from manual and auto focus/exposure. Values can also be manually set by setting the number in the edit field, or by moving the seekbars left/right.
+4. `Frames` → number of frames recorded during capture
+5. `Reset` → if held, will reset the camera stream, and all menu settings to defaults. If tapped, will restart camera stream without reseting settings.
 6. `Big Button` → Hold down to start capturing of data, let go to end capture; wait for viewfinder to reset before recording the next capture
 
+Swipe from the left of the screen (or hit the menu button above `Save Name`) to access the settings menu. This menu contains:
+1. `Lock AE` → Lock autoexposure during capture, turn this off and the app will adjust autoexposure during capture
+2. `Lock AF` → Lock autofocus during capture, turn this off and the app with continuously refocus during capture
+3. `Lock OIS` → Turn off optical image stabilization
+4. `Max FPS` → Max framerate at which data will be recorded, most camera streams only support a max of 30 or 60 depending on the device
+5. `Max Frames` → App ends recording after this number of frames (e.g., useful for capturing a dataset of exactly 42-frame bursts)
+6. `Resolution` → Resolution of RAW image files written to disk. `Full` saves their original resolution (e.g., 12 megapixel), `Half` downsamples the Bayer grid by 2.
+
 ## Processing the Recorded Data
-1. If the capture is succesful data is written to your devices `Documents` folder, this can be found in the File browser under `Internal Storage`. A succesful capture contains a set of RAW images in `.dng` format with associated metadata in binary format, as well as `MOTION.bin` and `CHARACTERISTICS.bin`, which are the recorded IMU measurements and physical camera properties (e.g., focal length), respectively
+1. If the capture is succesful data is written to your devices `Documents` folder, this can be found in the File browser under `Internal Storage`. A succesful capture contains a set of RAW images in `.raw` format with associated metadata in binary format, image previews in `.bmp` format, and `MOTION.bin` and `CHARACTERISTICS.bin`, which are the recorded IMU measurements and physical camera properties (e.g., focal length), respectively.
 2. [Transfer the folders to your computer](https://support.google.com/android/answer/9064445)
 3. Use `convert_files.py` to convert captured data into a `.npz` numpy dictionary file via  
 
@@ -73,9 +81,9 @@ Alternatively, thanks to [IzzySoft](https://github.com/IzzySoft), you can also f
 ## FAQ / Known Issues / Things to Watch Out For / "Features"
 
 * App sometimes hangs and/or crashes. If a folder does not contain `CHARACTERISTICS.bin`, the last save file, you can assume data recording was interrupted and the capture is incomplete
-* When `Manual E` is set, the viewfinder slightly dims. I think this is a bug with the camera2 preview stream, as the recorded data will appear brighter than the viewfinder
+* When set to manual exposure, the viewfinder slightly dims. I think this is a bug with the camera2 preview stream and not my app, as the recorded data will appear brighter than the viewfinder
 * Don't select a camera that your phone does not have (e.g., telephoto on a Pixel 6a), app will crash
-* **Physical camera IDs are hard-coded.** They should be correct for most Pixel devices, but I have not tested any other Android phones. Due to the non-trivial problem of determining which camera ID corresponds to which camera, these values are set in the radio button selector section of `CameraFragment.kt` (approx. lines 500-550). If they are wrong I recommend just manually testing numbers 1-10, it's easier than trying to dig through camera characteristics
+* **Physical camera IDs are (sort of) hard-coded.** They should be correct for most Pixel devices, but I have not tested any other Android phones. Due to the non-trivial problem of determining which camera ID corresponds to which camera, these values are set in the radio button selector section of `CameraFragment.kt` (search for the comment "Radio Camera Selection"). If they are wrong I recommend just manually testing numbers 1-10, it's easier than trying to dig through camera characteristics
 * To avoid accidental rotations, the app assumes you are recording in portrait mode, and .dng files will always be in portrait orientation
 * If it's behaving weird try turning the app off and on again
 

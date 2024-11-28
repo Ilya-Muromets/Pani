@@ -3,7 +3,7 @@ package fragmentargs;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.navigation.NavDirections;
-import com.android.pani.R;
+import info.ilyac.pani.R;
 import java.lang.IllegalArgumentException;
 import java.lang.Object;
 import java.lang.Override;

@@ -51,10 +51,11 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-kapt'
 
 android {
-    namespace 'com.android.pani'
+    namespace 'info.ilyac.pani'
+
     compileSdkVersion 35
     defaultConfig {
-        applicationId "com.android.example.camera"
+        applicationId "info.ilyac.pani"
         minSdkVersion 29
         targetSdkVersion 35
         versionCode 4
@@ -80,6 +81,11 @@ android {
 
     buildFeatures {
         viewBinding = true
+        dataBinding = true
+    }
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
 }
 

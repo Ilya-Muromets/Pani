@@ -27,7 +27,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.android.pani.fragments
+package info.ilyac.pani.fragments
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -46,8 +46,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.Navigation
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.android.camera.utils.GenericListAdapter
-import com.android.pani.R
+import info.ilyac.pani.utils.GenericListAdapter
+import info.ilyac.pani.R
 import fragmentargs.SelectorFragmentDirections
 
 class SelectorFragment : Fragment() {

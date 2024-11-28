@@ -28,13 +28,17 @@
  * limitations under the License.
  */
 
-package com.android.pani
+package info.ilyac.pani
 
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import androidx.appcompat.app.AppCompatActivity
-import com.android.pani.databinding.ActivityCameraBinding
+import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.NavHostFragment
+import info.ilyac.pani.databinding.ActivityCameraBinding
+import info.ilyac.pani.fragments.CameraFragment
 
 class CameraActivity : AppCompatActivity() {
 
@@ -48,11 +52,38 @@ class CameraActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Before setting full screen flags, we must wait a bit to let UI settle; otherwise, we may
-        // be trying to set app to immersive mode before it's ready and the flags do not stick
+        // Hide system bars
         activityCameraBinding.fragmentContainer.windowInsetsController?.let {
             it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             it.hide(WindowInsets.Type.systemBars())
         }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            val cameraFragment = getCurrentCameraFragment()
+            if (cameraFragment != null) {
+                cameraFragment.startBurstCapture()
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            val cameraFragment = getCurrentCameraFragment()
+            if (cameraFragment != null) {
+                cameraFragment.stopBurstCapture()
+                return true
+            }
+        }
+        return super.onKeyUp(keyCode, event)
+    }
+
+    private fun getCurrentCameraFragment(): CameraFragment? {
+        val navHostFragment = supportFragmentManager
+            .findFragmentById(R.id.fragment_container) as? NavHostFragment
+        return navHostFragment?.childFragmentManager?.primaryNavigationFragment as? CameraFragment
     }
 }

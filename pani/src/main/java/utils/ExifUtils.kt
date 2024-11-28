@@ -28,7 +28,7 @@
  * limitations under the License.
  */
 
-package com.example.android.camera.utils
+package info.ilyac.pani.utils
 
 import android.graphics.Bitmap
 import android.graphics.Matrix

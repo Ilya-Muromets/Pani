@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="40dp"
+    android:viewportWidth="100"
+    android:viewportHeight="31">
+
+
+    <!-- Long tick on the far left -->
+    <path
+        android:fillColor="#AB0000"
+        android:pathData="M5,2.5 L5,27.5 L6,27.5 L6,2.5 Z
+                         M6,2.5 L10,2.5 L10,4.5 L6,4.5 Z
+                         M6,25.5 L10,25.5 L10,27.5 L6,27.5 Z" />
+
+    <!-- Short tick #1 -->
+    <path
+        android:fillColor="#500000"
+        android:pathData="M15,8.75 L15,21.25 L16,21.25 L16,8.75 Z" />
+
+    <!-- Short tick #2 -->
+    <path
+        android:fillColor="#AB0000"
+        android:pathData="M25,8.75 L25,21.25 L26,21.25 L26,8.75 Z" />
+
+    <!-- Short tick #3 -->
+    <path
+        android:fillColor="#500000"
+        android:pathData="M35,8.75 L35,21.25 L36,21.25 L36,8.75 Z" />
+
+    <!-- Long tick in the center -->
+    <path
+        android:fillColor="#AB0000"
+        android:pathData="M50,2.5 L50,27.5 L51,27.5 L51,2.5 Z" />
+
+    <!-- Short tick #4 -->
+    <path
+        android:fillColor="#500000"
+        android:pathData="M60,8.75 L60,21.25 L61,21.25 L61,8.75 Z" />
+
+    <!-- Short tick #5 -->
+    <path
+        android:fillColor="#AB0000"
+        android:pathData="M70,8.75 L70,21.25 L71,21.25 L71,8.75 Z" />
+
+    <!-- Short tick #6 -->
+    <path
+        android:fillColor="#500000"
+        android:pathData="M80,8.75 L80,21.25 L81,21.25 L81,8.75 Z" />
+
+    <!-- Long tick on the far right -->
+    <path
+        android:fillColor="#AB0000"
+        android:pathData="M95,2.5 L95,27.5 L96,27.5 L96,2.5 Z
+                         M91,2.5 L95,2.5 L95,4.5 L91,4.5 Z
+                         M91,25.5 L95,25.5 L95,27.5 L91,27.5 Z" />
+
+</vector>

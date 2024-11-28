@@ -2,7 +2,7 @@ package fragmentargs;
 import androidx.annotation.NonNull;
 import androidx.navigation.ActionOnlyNavDirections;
 import androidx.navigation.NavDirections;
-import com.android.pani.R;
+import info.ilyac.pani.R;
 
 public class CameraFragmentDirections {
   private CameraFragmentDirections() {
