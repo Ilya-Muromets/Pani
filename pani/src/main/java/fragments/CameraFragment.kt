@@ -1062,12 +1062,22 @@ class CameraFragment : Fragment() {
         handler: Handler? = null
     ): CameraCaptureSession = suspendCoroutine { cont ->
 
-        val outputConfigsLogical = OutputConfiguration(targets[0]).apply {
-            setPhysicalCameraId(physicalCameraID)
+        val outputConfigsLogical = try {
+            OutputConfiguration(targets[0]).apply {
+                setPhysicalCameraId(physicalCameraID)
+            }
+        } catch (e: Exception) {
+            OutputConfiguration(targets[0]) // Fallback if no physical camera Id (e.g., Samsung)
         }
-        val outputConfigsPhysical = OutputConfiguration(targets[1]).apply {
-            setPhysicalCameraId(physicalCameraID)
+
+        val outputConfigsPhysical = try {
+            OutputConfiguration(targets[1]).apply {
+                setPhysicalCameraId(physicalCameraID)
+            }
+        } catch (e: Exception) {
+            OutputConfiguration(targets[1]) // Fallback if no physical camera Id (e.g., Samsung)
         }
+
         val outputConfigsAll = listOf(outputConfigsLogical, outputConfigsPhysical)
         val executor = Executors.newSingleThreadExecutor()
 
