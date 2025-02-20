@@ -1062,12 +1062,20 @@ class CameraFragment : Fragment() {
         handler: Handler? = null
     ): CameraCaptureSession = suspendCoroutine { cont ->
 
+        val isLogicalMultiCam = characteristicsP.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+            ?.contains(CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA) ?: false
+
         val outputConfigsLogical = OutputConfiguration(targets[0]).apply {
-            setPhysicalCameraId(physicalCameraID)
+            if (isLogicalMultiCam) {
+                setPhysicalCameraId(physicalCameraID)
+            }
         }
         val outputConfigsPhysical = OutputConfiguration(targets[1]).apply {
-            setPhysicalCameraId(physicalCameraID)
+            if (isLogicalMultiCam) {
+                setPhysicalCameraId(physicalCameraID)
+            }
         }
+
         val outputConfigsAll = listOf(outputConfigsLogical, outputConfigsPhysical)
         val executor = Executors.newSingleThreadExecutor()
 
