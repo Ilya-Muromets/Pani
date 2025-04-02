@@ -1056,32 +1056,31 @@ class CameraFragment : Fragment() {
     }
 
     /** Starts a [CameraCaptureSession] and returns the configured session */
-    private suspend fun createCaptureSession(
+        private suspend fun createCaptureSession(
         device: CameraDevice,
         targets: List<Surface>,
         handler: Handler? = null
     ): CameraCaptureSession = suspendCoroutine { cont ->
 
-        val isLogicalMultiCam = characteristicsP.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
-            ?.contains(CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA) ?: false
 
-        val outputConfigsLogical = OutputConfiguration(targets[0]).apply {
-            if (isLogicalMultiCam) {
-                setPhysicalCameraId(physicalCameraID)
+        val logicalCameraId = device.id
+
+        val supportsPhysicalCam = cameraManager.getCameraCharacteristics(logicalCameraId)
+            .physicalCameraIds.contains(physicalCameraID)
+
+        val outputConfigs = targets.map { surface ->
+            OutputConfiguration(surface).apply {
+                if (supportsPhysicalCam) {
+                    setPhysicalCameraId(physicalCameraID)
+                }
             }
         }
-        val outputConfigsPhysical = OutputConfiguration(targets[1]).apply {
-            if (isLogicalMultiCam) {
-                setPhysicalCameraId(physicalCameraID)
-            }
-        }
 
-        val outputConfigsAll = listOf(outputConfigsLogical, outputConfigsPhysical)
         val executor = Executors.newSingleThreadExecutor()
 
         val sessionConfiguration = SessionConfiguration(
             SessionConfiguration.SESSION_REGULAR,
-            outputConfigsAll,
+            outputConfigs,
             executor,
             object : CameraCaptureSession.StateCallback() {
                 override fun onConfigured(session: CameraCaptureSession) = cont.resume(session)
@@ -1092,9 +1091,10 @@ class CameraFragment : Fragment() {
                 }
             }
         )
+
         device.createCaptureSession(sessionConfiguration)
     }
-
+    
     /** Captures a burst of images and saves them */
     private suspend fun takeBurst(
         imageReader: ImageReader,
