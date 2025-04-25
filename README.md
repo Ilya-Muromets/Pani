@@ -42,7 +42,7 @@ Pani is a *heavily* modified version of the [camera2basic](https://github.com/an
   
 Alternatively, thanks to [IzzySoft](https://github.com/IzzySoft), you can also find this app on IzzyOnDroid:  
   
-<a href="https://apt.izzysoft.de/fdroid/index/apk/com.android.example.camera2.basic/" style="text-decoration: none;">
+<a href="https://apt.izzysoft.de/fdroid/index/apk/info.ilyac.pani/" style="text-decoration: none;">
   <img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Open In IzzyOnDroid" style="height:60px;"/>
 </a>
 
