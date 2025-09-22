@@ -1,0 +1,1 @@
+<p><i>Pani</i> is a heavily modified version of the <a href='https://github.com/android/camera-samples/tree/main/Camera2Basic' target='_blank' rel='nofollow noopener'>camera2basic</a> app, built to simultaneously record 12MP RAW image data, pretty much all exposed camera/image metadata, and gyroscope + accelerometer measurements.</p>
